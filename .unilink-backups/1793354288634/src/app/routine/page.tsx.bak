@@ -1,0 +1,868 @@
+"use client";
+import { useState, useRef, useEffect } from "react";
+import { useContext } from "react";
+import { ThemeCtx } from "@/components/ui/Theme";
+
+type Theme = "light" | "dark";
+const useTheme = () => useContext(ThemeCtx);
+
+// ─── TOKENS ─────────────────────────────────────────────────────────────────────
+const LIGHT = {
+  bg: "#F8FAFC", surface: "#FFFFFF", surface2: "#F1F5F9", surface3: "#E2E8F0",
+  primary: "#2563EB", primaryDark: "#1D4ED8", primaryFg: "#FFFFFF",
+  text: "#0F172A", textMuted: "#64748B", textDim: "#94A3B8",
+  border: "#E2E8F0",
+  cardShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)",
+  primaryGlow: "rgba(37,99,235,0.14)",
+  todayBg: "rgba(37,99,235,0.04)",
+  activeNav: { bg: "#EFF6FF", text: "#2563EB" },
+  highlight: "#EFF6FF",
+  modalOverlay: "rgba(15,23,42,0.4)",
+};
+const DARK = {
+  bg: "#080D1A", surface: "#0F172A", surface2: "#172033", surface3: "#1E293B",
+  primary: "#3B82F6", primaryDark: "#2563EB", primaryFg: "#FFFFFF",
+  text: "#F8FAFC", textMuted: "#94A3B8", textDim: "#475569",
+  border: "#1E293B",
+  cardShadow: "0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.18)",
+  primaryGlow: "rgba(59,130,246,0.2)",
+  todayBg: "rgba(59,130,246,0.05)",
+  activeNav: { bg: "rgba(59,130,246,0.14)", text: "#60A5FA" },
+  highlight: "rgba(37,99,235,0.08)",
+  modalOverlay: "rgba(0,0,0,0.6)",
+};
+const tok = (t: Theme) => t === "light" ? LIGHT : DARK;
+
+// ─── ICON PATHS ──────────────────────────────────────────────────────────────────
+const P: Record<string, string[]> = {
+  arrowLeft:  ["M19 12H5M12 19l-7-7 7-7"],
+  arrowRight: ["M5 12h14M12 5l7 7-7 7"],
+  calendar:   ["M8 2v4M16 2v4M3 10h18", "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"],
+  clock:      ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 6v6l4 2"],
+  map:        ["M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z", "M12 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"],
+  user:       ["M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2", "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"],
+  x:          ["M18 6L6 18M6 6l12 12"],
+  alert:      ["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z", "M12 9v4M12 17h.01"],
+  book:       ["M4 19.5A2.5 2.5 0 0 1 6.5 17H20", "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"],
+  clipboard:  ["M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2", "M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2 2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2z"],
+  filter:     ["M22 3H2l8 9.46V19l4 2v-8.54L22 3z"],
+  check:      ["M20 6L9 17l-5-5"],
+  chevronDown:["M6 9l6 6 6-6"],
+  plus:       ["M12 5v14M5 12h14"],
+  googleCal:  ["M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z", "M16 2v4M8 2v4M3 10h18"],
+  download:   ["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"],
+  refresh:    ["M23 4v6h-6", "M1 20v-6h6", "M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"],
+};
+
+function Ic({ n, size = 16, color = "currentColor" }: { n: string; size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      {(P[n] ?? []).map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  );
+}
+
+// ─── SCHEDULE DATA ───────────────────────────────────────────────────────────────
+// Day indices: 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+// Today = Wed = index 3 (in the current week, Aug 26 2026)
+
+type ClassStatus = "normal" | "cancelled" | "rescheduled" | "next";
+
+type ClassBlock = {
+  id: string;
+  course: string; code: string; instructor: string; room: string; section: string;
+  day: number;         // 0–6
+  startHour: number;   // render position (new time for rescheduled)
+  durationH: number;   // in hours
+  color: string;
+  status: ClassStatus;
+  rescheduledTo?: string; // display label, e.g. "4:00 PM"
+  originalHour?: number;  // original slot for rescheduled classes
+};
+
+// ─── LAYOUT ALGORITHM ────────────────────────────────────────────────────────────
+// Assigns collision-free column slots to classes within a single day.
+// Returns each class augmented with `col` (0-based) and `totalCols`.
+type LayedOut = ClassBlock & { col: number; totalCols: number };
+
+function layoutDay(classes: ClassBlock[]): LayedOut[] {
+  if (classes.length === 0) return [];
+
+  function overlaps(a: ClassBlock, b: ClassBlock) {
+    return a.startHour < b.startHour + b.durationH &&
+           b.startHour < a.startHour + a.durationH;
+  }
+
+  // Step 1 — find connected components of mutually/transitively overlapping classes
+  const visited = new Set<string>();
+  const components: ClassBlock[][] = [];
+  const sorted = [...classes].sort((a, b) => a.startHour - b.startHour);
+
+  for (const cls of sorted) {
+    if (visited.has(cls.id)) continue;
+    const component: ClassBlock[] = [];
+    const queue = [cls];
+    while (queue.length > 0) {
+      const curr = queue.shift()!;
+      if (visited.has(curr.id)) continue;
+      visited.add(curr.id);
+      component.push(curr);
+      for (const other of sorted) {
+        if (!visited.has(other.id) && overlaps(curr, other)) queue.push(other);
+      }
+    }
+    components.push(component);
+  }
+
+  const result: LayedOut[] = [];
+
+  for (const component of components) {
+    const compSorted = [...component].sort((a, b) => a.startHour - b.startHour);
+    // Step 2 — greedy column assignment within component
+    const colEnds: number[] = [];
+    const assignments: Array<{ cls: ClassBlock; col: number }> = [];
+
+    for (const cls of compSorted) {
+      let assignedCol = -1;
+      for (let i = 0; i < colEnds.length; i++) {
+        if (colEnds[i] <= cls.startHour) {
+          assignedCol = i;
+          colEnds[i] = cls.startHour + cls.durationH;
+          break;
+        }
+      }
+      if (assignedCol === -1) {
+        assignedCol = colEnds.length;
+        colEnds.push(cls.startHour + cls.durationH);
+      }
+      assignments.push({ cls, col: assignedCol });
+    }
+
+    const totalCols = colEnds.length;
+    for (const { cls, col } of assignments) {
+      result.push({ ...cls, col, totalCols });
+    }
+  }
+
+  return result;
+}
+
+const CLASS_COLOR: Record<string, string> = {
+  "CSE 305": "#2563EB",
+  "CSE 301": "#8B5CF6",
+  "CSE 310": "#10B981",
+  "CSE 307": "#F59E0B",
+  "CSE 401": "#EC4899",
+  "CSE 303": "#06B6D4",
+};
+
+const SCHEDULE: ClassBlock[] = [
+  // Database Management: Sun+Tue 10:00-11:30
+  { id: "db-sun", course: "Database Management", code: "CSE 305", instructor: "Dr. Rahman", room: "502", section: "B", day: 0, startHour: 10, durationH: 1.5, color: CLASS_COLOR["CSE 305"], status: "normal" },
+  { id: "db-tue", course: "Database Management", code: "CSE 305", instructor: "Dr. Rahman", room: "502", section: "B", day: 2, startHour: 10, durationH: 1.5, color: CLASS_COLOR["CSE 305"], status: "normal" },
+  // Algorithms: Sun+Tue 12:00-1:30 — Tue cancelled
+  { id: "algo-sun", course: "Algorithms", code: "CSE 301", instructor: "Dr. Karim", room: "405", section: "B", day: 0, startHour: 12, durationH: 1.5, color: CLASS_COLOR["CSE 301"], status: "normal" },
+  { id: "algo-tue", course: "Algorithms", code: "CSE 301", instructor: "Dr. Karim", room: "405", section: "B", day: 2, startHour: 12, durationH: 1.5, color: CLASS_COLOR["CSE 301"], status: "cancelled" },
+  // Software Engineering: Mon+Wed 3:00-4:30 — Wed rescheduled to 4:00 PM (shown at new time)
+  { id: "se-mon", course: "Software Engineering", code: "CSE 310", instructor: "Ms. Sarah", room: "301", section: "B", day: 1, startHour: 15, durationH: 1.5, color: CLASS_COLOR["CSE 310"], status: "normal" },
+  { id: "se-wed", course: "Software Engineering", code: "CSE 310", instructor: "Ms. Sarah", room: "301", section: "B", day: 3, startHour: 16, durationH: 1.5, color: CLASS_COLOR["CSE 310"], status: "rescheduled", rescheduledTo: "4:00 PM", originalHour: 15 },
+  // Computer Networks: Mon+Thu 9:00-10:30
+  { id: "cn-mon", course: "Computer Networks", code: "CSE 307", instructor: "Dr. Ahmed", room: "204", section: "B", day: 1, startHour: 9, durationH: 1.5, color: CLASS_COLOR["CSE 307"], status: "normal" },
+  { id: "cn-thu", course: "Computer Networks", code: "CSE 307", instructor: "Dr. Ahmed", room: "204", section: "B", day: 4, startHour: 9, durationH: 1.5, color: CLASS_COLOR["CSE 307"], status: "normal" },
+  // AI: Tue+Thu 11:00-12:30
+  { id: "ai-tue", course: "Artificial Intelligence", code: "CSE 401", instructor: "Dr. Hasan", room: "Lab 3", section: "B", day: 2, startHour: 11, durationH: 1.5, color: CLASS_COLOR["CSE 401"], status: "normal" },
+  { id: "ai-thu", course: "Artificial Intelligence", code: "CSE 401", instructor: "Dr. Hasan", room: "Lab 3", section: "B", day: 4, startHour: 11, durationH: 1.5, color: CLASS_COLOR["CSE 401"], status: "normal" },
+  // Operating Systems: Wed+Sat 2:00-3:30
+  { id: "os-wed", course: "Operating Systems", code: "CSE 303", instructor: "Dr. Rahman", room: "402", section: "B", day: 3, startHour: 14, durationH: 1.5, color: CLASS_COLOR["CSE 303"], status: "normal" },
+  { id: "os-sat", course: "Operating Systems", code: "CSE 303", instructor: "Dr. Rahman", room: "402", section: "B", day: 6, startHour: 14, durationH: 1.5, color: CLASS_COLOR["CSE 303"], status: "normal" },
+];
+
+const SCHEDULE_CHANGES = [
+  { id: "chg1", course: "Database Management", code: "CSE 305", type: "room", detail: "Today's class moved from Room 502 to Room 605.", time: "30 minutes ago", color: CLASS_COLOR["CSE 305"] },
+  { id: "chg2", course: "Algorithms", code: "CSE 301", type: "cancelled", detail: "Today's class has been cancelled.", time: "1 hour ago", color: CLASS_COLOR["CSE 301"] },
+];
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_FULL  = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// Today is Wed Aug 26, 2026 — day index 3 in a Sun-Sat week
+// Week base: Sun Aug 23, 2026
+const WEEK_BASE_YEAR  = 2026;
+const WEEK_BASE_MONTH = 7; // 0-indexed (August)
+const WEEK_BASE_DAY   = 23; // Sunday Aug 23
+const TODAY_DAY_IDX   = 3; // Wednesday
+
+const TIME_SLOTS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
+const SLOT_H     = 70; // px per hour
+const GRID_START = 8;  // 8 AM
+
+function fmtTime(h: number) {
+  if (h === 12) return "12:00 PM";
+  if (h < 12)   return `${h}:00 AM`;
+  return `${h - 12}:00 PM`;
+}
+function fmtTimeRange(startH: number, durH: number) {
+  const endH   = startH + durH;
+  const endHr  = Math.floor(endH);
+  const endMin = Math.round((endH - endHr) * 60);
+  const s = fmtTime(startH);
+  const eHour  = endHr < 12 ? endHr : endHr === 12 ? 12 : endHr - 12;
+  const eAMPM  = endHr < 12 ? "AM" : "PM";
+  const eStr   = `${eHour}:${endMin.toString().padStart(2, "0")} ${eAMPM}`;
+  return `${s} – ${eStr}`;
+}
+
+// ─── SMALL REUSABLE COMPONENTS ───────────────────────────────────────────────────
+function GhostBtn({ children, active, onClick, small }: { children: React.ReactNode; active?: boolean; onClick?: () => void; small?: boolean }) {
+  const { theme } = useTheme();
+  const c = tok(theme);
+  const [hov, setHov] = useState(false);
+  return (
+    <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={onClick}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: active ? c.activeNav.bg : hov ? c.surface2 : "transparent", color: active ? c.primary : hov ? c.text : c.textMuted, border: `1px solid ${active ? "rgba(37,99,235,0.2)" : c.border}`, padding: small ? "5px 12px" : "8px 16px", borderRadius: 9, fontFamily: "Inter", fontSize: small ? 12 : 13, fontWeight: active ? 600 : 500, cursor: "pointer", transition: "all 0.16s ease", whiteSpace: "nowrap" }}>
+      {children}
+    </button>
+  );
+}
+
+function PrimaryBtn({ children, onClick, small }: { children: React.ReactNode; onClick?: () => void; small?: boolean }) {
+  const { theme } = useTheme();
+  const c = tok(theme);
+  const [hov, setHov] = useState(false);
+  return (
+    <button onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} onClick={onClick}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: hov ? c.primaryDark : c.primary, color: "#fff", border: "none", padding: small ? "6px 14px" : "8px 18px", borderRadius: 9, fontFamily: "Inter", fontSize: small ? 12 : 13, fontWeight: 600, cursor: "pointer", transition: "all 0.16s ease", boxShadow: hov ? `0 3px 12px ${c.primaryGlow}` : "none" }}>
+      {children}
+    </button>
+  );
+}
+
+// ─── CLASS DETAIL MODAL ──────────────────────────────────────────────────────────
+function ClassModal({ cls, t, weekOffset, onClose }: { cls: ClassBlock; t: Theme; weekOffset: number; onClose: () => void }) {
+  const c = tok(t);
+  const [calOpen, setCalOpen] = useState(false);
+  // Compute actual date
+  const baseDate = new Date(WEEK_BASE_YEAR, WEEK_BASE_MONTH, WEEK_BASE_DAY + weekOffset * 7 + cls.day);
+  const dayLabel = `${DAY_FULL[cls.day]}, ${MONTH_NAMES[baseDate.getMonth()]} ${baseDate.getDate()}`;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+      onClick={onClose}>
+      <div style={{ position: "absolute", inset: 0, background: c.modalOverlay, backdropFilter: "blur(6px)" }} />
+      <div onClick={(e) => e.stopPropagation()}
+        style={{ position: "relative", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 22, padding: "28px 30px", width: "100%", maxWidth: 440, boxShadow: "0 20px 60px rgba(0,0,0,0.22)", animation: "fade-up 0.2s ease both" }}>
+        {/* Close */}
+        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 8, width: 30, height: 30, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <Ic n="x" size={14} color={c.textDim} />
+        </button>
+
+        {/* Color stripe */}
+        <div style={{ width: 44, height: 44, borderRadius: 13, background: `${cls.color}18`, border: `1px solid ${cls.color}35`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 14, fontSize: 20 }}>
+          📘
+        </div>
+
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 5 }}>
+          <h2 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, margin: 0 }}>{cls.course}</h2>
+          {cls.status === "cancelled" && (
+            <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>CANCELLED</span>
+          )}
+          {cls.status === "rescheduled" && (
+            <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.2)" }}>RESCHEDULED</span>
+          )}
+        </div>
+        <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: `${cls.color}14`, color: cls.color, border: `1px solid ${cls.color}30`, display: "inline-block", marginBottom: 22 }}>{cls.code}</span>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 13, marginBottom: 24 }}>
+          {[
+            { icon: "user",     label: "Instructor", val: cls.instructor },
+            { icon: "calendar", label: "Date",       val: dayLabel },
+            { icon: "clock",    label: "Time",       val: cls.status === "rescheduled" ? `${fmtTimeRange(cls.startHour, cls.durationH)} → ${cls.rescheduledTo}` : fmtTimeRange(cls.startHour, cls.durationH) },
+            { icon: "map",      label: "Room",       val: cls.room },
+            { icon: "book",     label: "Section",    val: cls.section },
+          ].map((m) => (
+            <div key={m.label} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <div style={{ width: 32, height: 32, borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Ic n={m.icon} size={14} color={c.textDim} />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 1 }}>{m.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{m.val}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 18, borderTop: `1px solid ${c.border}` }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <PrimaryBtn small><Ic n="book" size={13} color="#fff" /> View Course</PrimaryBtn>
+            <GhostBtn small><Ic n="book" size={13} color="currentColor" /> Materials</GhostBtn>
+            <GhostBtn small><Ic n="clipboard" size={13} color="currentColor" /> Assignments</GhostBtn>
+          </div>
+
+          {/* Add to Calendar */}
+          <div style={{ position: "relative" }}>
+            <GhostBtn small onClick={() => setCalOpen(!calOpen)}>
+              <Ic n="plus" size={12} color="currentColor" /> Add to Calendar <Ic n="chevronDown" size={12} color="currentColor" />
+            </GhostBtn>
+            {calOpen && (
+              <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, background: c.surface, border: `1px solid ${c.border}`, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.12)", overflow: "hidden", zIndex: 10, minWidth: 180, animation: "fade-in 0.15s ease both" }}>
+                {[
+                  { icon: "googleCal", label: "Google Calendar" },
+                  { icon: "calendar",  label: "Apple Calendar" },
+                  { icon: "download",  label: "Download .ics" },
+                ].map((opt) => (
+                  <button key={opt.label} onClick={() => setCalOpen(false)}
+                    style={{ display: "flex", alignItems: "center", gap: 10, width: "100%", padding: "10px 14px", background: "none", border: "none", cursor: "pointer", fontFamily: "Inter", fontSize: 13, color: c.textMuted, textAlign: "left", transition: "background 0.12s ease" }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = c.surface2)}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
+                  >
+                    <Ic n={opt.icon} size={14} color={c.textDim} /> {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── WEEK GRID CELL ─────────────────────────────────────────────────────────────
+const GAP = 3; // px gap between side-by-side cards
+
+function GridClassBlock({ cls, t, onClick }: { cls: LayedOut; t: Theme; onClick: () => void }) {
+  const c = tok(t);
+  const [hov, setHov] = useState(false);
+  const isCancelled   = cls.status === "cancelled";
+  const isRescheduled = cls.status === "rescheduled";
+
+  const top  = (cls.startHour - GRID_START) * SLOT_H + 1;
+  const h    = Math.max(cls.durationH * SLOT_H - 4, 28);
+
+  // Horizontal position within the day column based on assigned col slot
+  const pctW    = 100 / cls.totalCols;
+  const leftPct = cls.col * pctW;
+  // Apply pixel gaps: extra left gap for col>0, clip right edge
+  const leftPx  = cls.col > 0 ? GAP / 2 : GAP;
+  const rightPx = cls.col < cls.totalCols - 1 ? GAP / 2 : GAP;
+
+  const narrow = cls.totalCols >= 3;
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      onClick={onClick}
+      style={{
+        position: "absolute",
+        top,
+        height: h,
+        left: `calc(${leftPct}% + ${leftPx}px)`,
+        width: `calc(${pctW}% - ${leftPx + rightPx}px)`,
+        borderRadius: 9,
+        cursor: "pointer",
+        background: isCancelled ? c.surface2 : `${cls.color}13`,
+        border: `1px solid ${isCancelled ? c.border : cls.color + "40"}`,
+        borderLeft: `3px solid ${isCancelled ? c.textDim : cls.color}`,
+        opacity: isCancelled ? 0.65 : 1,
+        boxShadow: hov && !isCancelled ? `0 2px 10px ${cls.color}22` : "none",
+        transform: hov && !isCancelled ? "scale(1.015)" : "none",
+        transition: "all 0.17s ease",
+        overflow: "hidden",
+        padding: narrow ? "5px 5px" : "6px 7px",
+        display: "flex", flexDirection: "column", justifyContent: "space-between",
+        boxSizing: "border-box",
+      }}
+    >
+      {isRescheduled && !narrow && (
+        <div style={{ position: "absolute", top: 3, right: 3, padding: "1px 5px", borderRadius: 4, fontSize: 8, fontWeight: 700, background: "rgba(245,158,11,0.12)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.25)", lineHeight: 1.4 }}>
+          ↻
+        </div>
+      )}
+
+      <div>
+        <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: narrow ? 9 : 11, color: isCancelled ? c.textDim : cls.color, lineHeight: 1.25, textDecoration: isCancelled ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {cls.course}
+        </div>
+        <div style={{ fontSize: narrow ? 8 : 10, fontWeight: 600, color: c.textDim, marginTop: 1 }}>{cls.code}</div>
+      </div>
+
+      {h > 50 && (
+        <div style={{ fontSize: narrow ? 8 : 10, color: c.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {isCancelled
+            ? <span style={{ fontSize: 9, fontWeight: 700, color: "#EF4444" }}>CANCELLED</span>
+            : `${fmtTime(cls.startHour)} · ${cls.room}`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── WEEK VIEW ───────────────────────────────────────────────────────────────────
+function WeekView({ t, weekOffset, filterCourse, onSelectClass }: {
+  t: Theme; weekOffset: number; filterCourse: string; onSelectClass: (cls: ClassBlock) => void;
+}) {
+  const c = tok(t);
+  const baseDate = new Date(WEEK_BASE_YEAR, WEEK_BASE_MONTH, WEEK_BASE_DAY + weekOffset * 7);
+  const filtered = SCHEDULE.filter((cls) => filterCourse === "All" || cls.code === filterCourse);
+
+  // Pre-compute collision-free layouts for every day column
+  const dayLayouts = DAY_NAMES.map((_, dayIdx) =>
+    layoutDay(filtered.filter((cls) => cls.day === dayIdx))
+  );
+
+  return (
+    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, overflow: "hidden", boxShadow: c.cardShadow }}>
+      {/* Day header row */}
+      <div style={{ display: "grid", gridTemplateColumns: "52px repeat(7, 1fr)", borderBottom: `1px solid ${c.border}`, background: c.surface2 }}>
+        <div style={{ borderRight: `1px solid ${c.border}` }} />
+        {DAY_NAMES.map((d, i) => {
+          const date = new Date(baseDate);
+          date.setDate(baseDate.getDate() + i);
+          const isToday = weekOffset === 0 && i === TODAY_DAY_IDX;
+          return (
+            <div key={d} style={{ textAlign: "center", padding: "12px 4px", borderRight: i < 6 ? `1px solid ${c.border}` : undefined, background: isToday ? c.todayBg : undefined }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: isToday ? c.primary : c.textDim, textTransform: "uppercase", letterSpacing: "0.05em" }}>{d}</div>
+              <div style={{
+                fontFamily: "Manrope", fontWeight: 800, fontSize: 15,
+                color: isToday ? "#FFFFFF" : c.text,
+                background: isToday ? c.primary : undefined,
+                width: 28, height: 28, borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "4px auto 0",
+              }}>
+                {date.getDate()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Grid body */}
+      <div style={{ display: "grid", gridTemplateColumns: "52px repeat(7, 1fr)", overflowY: "auto", maxHeight: 620 }}>
+        {/* Time column */}
+        <div style={{ borderRight: `1px solid ${c.border}` }}>
+          {TIME_SLOTS.map((h) => (
+            <div key={h} style={{ height: SLOT_H, borderBottom: `1px solid ${c.border}`, display: "flex", alignItems: "flex-start", justifyContent: "flex-end", paddingRight: 8, paddingTop: 6 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: c.textDim }}>{fmtTime(h).replace(":00", "")}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Day columns — each is a relative container with height = total slot count */}
+        {DAY_NAMES.map((_, dayIdx) => {
+          const isToday = weekOffset === 0 && dayIdx === TODAY_DAY_IDX;
+          const laidOut = dayLayouts[dayIdx];
+          return (
+            <div key={dayIdx}
+              style={{ position: "relative", borderRight: dayIdx < 6 ? `1px solid ${c.border}` : undefined, background: isToday ? c.todayBg : undefined, height: SLOT_H * TIME_SLOTS.length }}
+            >
+              {/* Horizontal hour lines */}
+              {TIME_SLOTS.map((_, si) => (
+                <div key={si} style={{ position: "absolute", left: 0, right: 0, top: si * SLOT_H, height: SLOT_H, borderBottom: `1px solid ${c.border}` }} />
+              ))}
+              {/* Collision-free class blocks */}
+              {laidOut.map((cls) => (
+                <GridClassBlock key={cls.id} cls={cls} t={t} onClick={() => onSelectClass(cls)} />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── DAY VIEW ────────────────────────────────────────────────────────────────────
+function DayCard({ cls, t, onClick }: { cls: ClassBlock; t: Theme; onClick: () => void }) {
+  const c = tok(t);
+  const isCancelled   = cls.status === "cancelled";
+  const isRescheduled = cls.status === "rescheduled";
+  return (
+    <div onClick={onClick}
+      style={{ flex: 1, background: isCancelled ? c.surface2 : `${cls.color}10`, border: `1px solid ${isCancelled ? c.border : cls.color + "35"}`, borderLeft: `3px solid ${isCancelled ? c.textDim : cls.color}`, borderRadius: 12, padding: "12px 16px", cursor: "pointer", transition: "all 0.18s ease", opacity: isCancelled ? 0.7 : 1, minWidth: 0 }}
+      onMouseEnter={(e) => { if (!isCancelled) (e.currentTarget as HTMLElement).style.boxShadow = `0 3px 12px ${cls.color}25`; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: isCancelled ? c.textDim : cls.color, textDecoration: isCancelled ? "line-through" : "none", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cls.course}</div>
+          <div style={{ fontSize: 11, color: c.textDim, marginTop: 2 }}>{cls.code} · {fmtTimeRange(cls.startHour, cls.durationH)}</div>
+          <div style={{ fontSize: 11, color: c.textMuted, marginTop: 3 }}>Room {cls.room} · {cls.instructor}</div>
+        </div>
+        <div style={{ flexShrink: 0 }}>
+          {isCancelled   && <span style={{ padding: "2px 7px", borderRadius: 999, fontSize: 9, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)", display: "block" }}>CANCELLED</span>}
+          {isRescheduled && <span style={{ padding: "2px 7px", borderRadius: 999, fontSize: 9, fontWeight: 700, background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.2)", display: "block", whiteSpace: "nowrap" }}>→ {cls.rescheduledTo}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DayView({ t, weekOffset, selectedDay, onChangeDay, filterCourse, onSelectClass }: {
+  t: Theme; weekOffset: number; selectedDay: number; onChangeDay: (d: number) => void; filterCourse: string; onSelectClass: (cls: ClassBlock) => void;
+}) {
+  const c = tok(t);
+  const baseDate = new Date(WEEK_BASE_YEAR, WEEK_BASE_MONTH, WEEK_BASE_DAY + weekOffset * 7 + selectedDay);
+  const dayClasses = SCHEDULE.filter((cls) => cls.day === selectedDay && (filterCourse === "All" || cls.code === filterCourse));
+  const isToday = weekOffset === 0 && selectedDay === TODAY_DAY_IDX;
+
+  // Group classes by start hour so simultaneous classes render side-by-side
+  // Use layoutDay to detect ALL overlaps, then group by unique start times for the timeline
+  const laidOut = layoutDay(dayClasses);
+
+  // Build per-hour groups: for each TIME_SLOT, collect classes that START at that hour
+  // For partial overlaps: a class starting at hour H goes under H, even if it overlaps with H+1
+  // We rely on layoutDay's col assignment to decide side-by-side display
+  // Group: classes that share ANY time with each other form a "cluster" row
+  // Simplest: group by startHour, handle overlaps by showing side-by-side within each cluster
+  const timeGroups: { hour: number; classes: LayedOut[] }[] = [];
+  const renderedIds = new Set<string>();
+
+  for (const hour of TIME_SLOTS) {
+    const startingHere = laidOut.filter((cls) => cls.startHour === hour);
+    if (startingHere.length > 0) {
+      startingHere.forEach((cls) => renderedIds.add(cls.id));
+      timeGroups.push({ hour, classes: startingHere });
+    }
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Day selector strip */}
+      <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, padding: "4px", display: "flex", gap: 2 }}>
+        {DAY_NAMES.map((d, i) => {
+          const date = new Date(WEEK_BASE_YEAR, WEEK_BASE_MONTH, WEEK_BASE_DAY + weekOffset * 7 + i);
+          const active = selectedDay === i;
+          const hasClass = SCHEDULE.some((cls) => cls.day === i && (filterCourse === "All" || cls.code === filterCourse));
+          return (
+            <button key={d} onClick={() => onChangeDay(i)}
+              style={{ flex: 1, padding: "10px 4px", borderRadius: 10, background: active ? c.primary : "transparent", border: "none", cursor: "pointer", transition: "all 0.16s ease", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <span style={{ fontSize: 10, fontWeight: 600, color: active ? "rgba(255,255,255,0.8)" : c.textDim, letterSpacing: "0.05em" }}>{d}</span>
+              <span style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 14, color: active ? "#FFFFFF" : c.text }}>{date.getDate()}</span>
+              {hasClass && !active && <div style={{ width: 4, height: 4, borderRadius: "50%", background: c.primary }} />}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Timeline */}
+      <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+        <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 20 }}>
+          {DAY_FULL[selectedDay]}, {MONTH_NAMES[baseDate.getMonth()]} {baseDate.getDate()}
+          {isToday && <span style={{ marginLeft: 10, padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${c.primary}14`, color: c.primary }}>Today</span>}
+        </div>
+
+        {laidOut.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "48px 0" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🗓️</div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 16, color: c.text, marginBottom: 6 }}>No classes scheduled</div>
+            <div style={{ fontSize: 13, color: c.textMuted }}>You have a free day! Enjoy your time.</div>
+          </div>
+        ) : (
+          <div style={{ position: "relative" }}>
+            {/* Vertical timeline line */}
+            <div style={{ position: "absolute", left: 56, top: 8, bottom: 8, width: 1, background: c.border }} />
+
+            {TIME_SLOTS.map((hour) => {
+              const group = timeGroups.find((g) => g.hour === hour);
+              const hasClass = !!group;
+
+              return (
+                <div key={hour} style={{ display: "flex", gap: 0, marginBottom: hasClass ? 10 : 2 }}>
+                  {/* Time label */}
+                  <div style={{ width: 52, flexShrink: 0, paddingTop: 3, paddingRight: 8, textAlign: "right" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: hasClass ? c.text : c.textDim }}>{fmtTime(hour).replace(":00", "")}</span>
+                  </div>
+                  {/* Dot */}
+                  <div style={{ width: 9, height: 9, borderRadius: "50%", background: hasClass && group.classes[0].status !== "cancelled" ? group.classes[0].color : c.border, marginTop: 5, flexShrink: 0, zIndex: 1, border: `2px solid ${c.surface}`, boxSizing: "border-box" }} />
+                  {/* Class cards — side-by-side if multiple */}
+                  <div style={{ flex: 1, paddingLeft: 12, paddingBottom: hasClass ? 6 : 0 }}>
+                    {hasClass ? (
+                      <div>
+                        {group.classes.length > 1 && (
+                          <div style={{ fontSize: 10, color: c.textDim, marginBottom: 5, fontWeight: 600 }}>Same time · {group.classes.length} classes</div>
+                        )}
+                        <div style={{ display: "flex", gap: 8 }}>
+                          {group.classes.map((cls) => (
+                            <DayCard key={cls.id} cls={cls} t={t} onClick={() => onSelectClass(cls)} />
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ height: 20, display: "flex", alignItems: "center" }}>
+                        <span style={{ fontSize: 11, color: c.textDim }}>Free</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN ROUTINE PAGE ────────────────────────────────────────────────────────────
+export default function RoutinePage() {
+  const { theme } = useTheme();
+  const t = theme;
+  const c = tok(t);
+
+  const [view, setView] = useState<"week" | "day">("week");
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDay, setSelectedDay] = useState(TODAY_DAY_IDX);
+  const [selectedClass, setSelectedClass] = useState<ClassBlock | null>(null);
+  const [filterCourse, setFilterCourse] = useState("All");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(e.target as Node)) setFilterOpen(false);
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const baseDate = new Date(WEEK_BASE_YEAR, WEEK_BASE_MONTH, WEEK_BASE_DAY + weekOffset * 7);
+  const endDate  = new Date(WEEK_BASE_YEAR, WEEK_BASE_MONTH, WEEK_BASE_DAY + weekOffset * 7 + 6);
+  const weekLabel = `${MONTH_NAMES[baseDate.getMonth()]} ${baseDate.getDate()} — ${MONTH_NAMES[endDate.getMonth()]} ${endDate.getDate()}, ${endDate.getFullYear()}`;
+
+  const todayClasses = SCHEDULE.filter((cls) => cls.day === TODAY_DAY_IDX && cls.status !== "cancelled");
+  const nextClass    = todayClasses.length > 0 ? todayClasses[0] : null;
+
+  const uniqueCodes = ["All", ...Array.from(new Set(SCHEDULE.map((c) => c.code)))];
+
+  const stats = [
+    { label: "Today's Classes", value: "3", sub: "Wednesday", icon: "📚", color: c.primary, bg: `rgba(37,99,235,0.1)` },
+    { label: "Next Class",      value: "10 AM", sub: nextClass?.course ?? "None", icon: "⏰", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+    { label: "Free Time",       value: "2 hrs", sub: "Today",  icon: "☕", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+    { label: "Schedule Changes",value: "2",     sub: "This week", icon: "⚠️", color: "#EF4444", bg: "rgba(239,68,68,0.1)" },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", background: c.bg, display: "flex", flexDirection: "column" }}>
+      {/* Modal */}
+      {selectedClass && (
+        <ClassModal cls={selectedClass} t={t} weekOffset={weekOffset} onClose={() => setSelectedClass(null)} />
+      )}
+
+      <div style={{ padding: "28px 32px 80px" }}>
+        <div style={{ maxWidth: 1300, margin: "0 auto" }}>
+
+          {/* Page header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 26 }}>
+            <div>
+              <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 26, color: c.text, letterSpacing: "-0.02em", marginBottom: 5 }}>Routine</h1>
+              <p style={{ fontSize: 14, color: c.textMuted }}>View your weekly class schedule and stay updated with schedule changes.</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {/* Filter dropdown */}
+              <div ref={filterRef} style={{ position: "relative" }}>
+                <GhostBtn onClick={() => setFilterOpen(!filterOpen)}>
+                  <Ic n="filter" size={14} color="currentColor" />
+                  {filterCourse === "All" ? "All Courses" : filterCourse}
+                  <Ic n="chevronDown" size={12} color="currentColor" />
+                </GhostBtn>
+                {filterOpen && (
+                  <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", overflow: "hidden", zIndex: 50, minWidth: 200, animation: "fade-in 0.15s ease both" }}>
+                    {uniqueCodes.map((code) => (
+                      <button key={code} onClick={() => { setFilterCourse(code); setFilterOpen(false); }}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "10px 16px", background: filterCourse === code ? c.highlight : "none", border: "none", cursor: "pointer", fontFamily: "Inter", fontSize: 13, color: filterCourse === code ? c.primary : c.text, textAlign: "left", gap: 10 }}
+                        onMouseEnter={(e) => { if (filterCourse !== code) (e.currentTarget as HTMLElement).style.background = c.surface2; }}
+                        onMouseLeave={(e) => { if (filterCourse !== code) (e.currentTarget as HTMLElement).style.background = "none"; }}
+                      >
+                        {code === "All" ? "All Courses" : (() => {
+                          const cls = SCHEDULE.find((s) => s.code === code);
+                          return cls ? `${cls.course}` : code;
+                        })()}
+                        {filterCourse === code && <Ic n="check" size={13} color={c.primary} />}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {/* View toggle */}
+              <div style={{ display: "flex", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 10, padding: 3, gap: 2 }}>
+                {(["week", "day"] as const).map((v) => (
+                  <button key={v} onClick={() => setView(v)}
+                    style={{ padding: "6px 14px", borderRadius: 8, background: view === v ? c.surface : "transparent", border: view === v ? `1px solid ${c.border}` : "1px solid transparent", fontFamily: "Inter", fontSize: 12, fontWeight: view === v ? 600 : 500, color: view === v ? c.text : c.textMuted, cursor: "pointer", transition: "all 0.16s ease", boxShadow: view === v ? "0 1px 3px rgba(0,0,0,0.08)" : "none", textTransform: "capitalize" }}>
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Stat cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 20 }}>
+            {stats.map((s) => (
+              <div key={s.label} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
+                <div>
+                  <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 20, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: c.text, marginTop: 2 }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: c.textDim }}>{s.sub}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Week navigation */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button onClick={() => setWeekOffset(w => w - 1)}
+                style={{ width: 34, height: 34, borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.14s ease" }}
+                onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.borderColor = c.primary}
+                onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.borderColor = c.border}
+              >
+                <Ic n="arrowLeft" size={15} color={c.textMuted} />
+              </button>
+              <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, minWidth: 220, textAlign: "center" }}>{weekLabel}</div>
+              <button onClick={() => setWeekOffset(w => w + 1)}
+                style={{ width: 34, height: 34, borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.14s ease" }}
+                onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.borderColor = c.primary}
+                onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.borderColor = c.border}
+              >
+                <Ic n="arrowRight" size={15} color={c.textMuted} />
+              </button>
+              {weekOffset !== 0 && (
+                <GhostBtn small onClick={() => { setWeekOffset(0); setSelectedDay(TODAY_DAY_IDX); }}>
+                  <Ic n="calendar" size={13} color="currentColor" /> Today
+                </GhostBtn>
+              )}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {Object.entries(CLASS_COLOR).map(([code, color]) => {
+                const name = SCHEDULE.find((s) => s.code === code)?.course.split(" ")[0];
+                return (
+                  <div key={code} style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                    <div style={{ width: 8, height: 8, borderRadius: "50%", background: color }} />
+                    <span style={{ fontSize: 11, color: c.textDim }}>{code}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Main content + schedule changes sidebar */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 18, alignItems: "flex-start" }}>
+            {/* Calendar */}
+            <div>
+              {view === "week" ? (
+                <WeekView t={t} weekOffset={weekOffset} filterCourse={filterCourse} onSelectClass={(cls) => setSelectedClass(cls)} />
+              ) : (
+                <DayView t={t} weekOffset={weekOffset} selectedDay={selectedDay} onChangeDay={setSelectedDay} filterCourse={filterCourse} onSelectClass={(cls) => setSelectedClass(cls)} />
+              )}
+            </div>
+
+            {/* Right sidebar */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+              {/* Next class card */}
+              {nextClass && weekOffset === 0 && (
+                <div style={{ background: `linear-gradient(135deg, ${nextClass.color}, ${nextClass.color}CC)`, borderRadius: 18, padding: "20px 22px", color: "#fff" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.75, letterSpacing: "0.07em", marginBottom: 10 }}>NEXT CLASS</div>
+                  <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 15, marginBottom: 10 }}>{nextClass.course}</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, opacity: 0.9, marginBottom: 16 }}>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <Ic n="clock" size={12} color="rgba(255,255,255,0.75)" />
+                      <span style={{ fontSize: 12 }}>{fmtTimeRange(nextClass.startHour, nextClass.durationH)}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <Ic n="map" size={12} color="rgba(255,255,255,0.75)" />
+                      <span style={{ fontSize: 12 }}>Room {nextClass.room}</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+                      <Ic n="user" size={12} color="rgba(255,255,255,0.75)" />
+                      <span style={{ fontSize: 12 }}>{nextClass.instructor}</span>
+                    </div>
+                  </div>
+                  <button onClick={() => setSelectedClass(nextClass)} style={{ width: "100%", padding: "8px", borderRadius: 10, background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer", backdropFilter: "blur(4px)", transition: "background 0.15s" }}
+                    onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.3)")}
+                    onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.2)")}
+                  >
+                    View Course →
+                  </button>
+                </div>
+              )}
+
+              {/* Schedule changes */}
+              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 16 }}>
+                  <Ic n="alert" size={15} color="#F59E0B" />
+                  <span style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Schedule Changes</span>
+                  <span style={{ marginLeft: "auto", padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(245,158,11,0.08)", color: "#F59E0B", border: "1px solid rgba(245,158,11,0.2)" }}>{SCHEDULE_CHANGES.length}</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {SCHEDULE_CHANGES.map((chg) => (
+                    <div key={chg.id} style={{ background: c.surface2, border: `1px solid ${c.border}`, borderLeft: `3px solid ${chg.type === "cancelled" ? "#EF4444" : "#F59E0B"}`, borderRadius: 10, padding: "12px 14px" }}>
+                      <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 12, color: c.text, marginBottom: 4 }}>{chg.course}</div>
+                      <div style={{ fontSize: 11, color: c.textMuted, lineHeight: 1.5, marginBottom: 6 }}>{chg.detail}</div>
+                      <div style={{ fontSize: 10, color: c.textDim }}>{chg.time}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Today's schedule list */}
+              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
+                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 16 }}>Today's Schedule</div>
+                {SCHEDULE.filter((cls) => cls.day === TODAY_DAY_IDX).sort((a, b) => a.startHour - b.startHour).length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "24px 0" }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🎉</div>
+                    <div style={{ fontSize: 13, color: c.textMuted }}>No classes today!</div>
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {SCHEDULE.filter((cls) => cls.day === TODAY_DAY_IDX).sort((a, b) => a.startHour - b.startHour).map((cls) => (
+                      <div key={cls.id} onClick={() => setSelectedClass(cls)}
+                        style={{ display: "flex", gap: 10, padding: "10px 12px", background: c.surface2, borderRadius: 11, border: `1px solid ${c.border}`, cursor: "pointer", transition: "all 0.16s ease", opacity: cls.status === "cancelled" ? 0.6 : 1 }}
+                        onMouseEnter={(e) => (e.currentTarget as HTMLElement).style.borderColor = cls.color}
+                        onMouseLeave={(e) => (e.currentTarget as HTMLElement).style.borderColor = c.border}
+                      >
+                        <div style={{ width: 3, borderRadius: 2, background: cls.status === "cancelled" ? c.textDim : cls.color, flexShrink: 0 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: cls.status === "cancelled" ? c.textDim : c.text, textDecoration: cls.status === "cancelled" ? "line-through" : "none" }}>{cls.course}</div>
+                          <div style={{ fontSize: 11, color: c.textDim, marginTop: 2 }}>{fmtTime(cls.startHour)} · Room {cls.room}</div>
+                        </div>
+                        {cls.status === "cancelled" && <span style={{ fontSize: 9, fontWeight: 700, color: "#EF4444", alignSelf: "flex-start", marginTop: 2 }}>✕</span>}
+                        {cls.status === "rescheduled" && <span style={{ fontSize: 9, fontWeight: 700, color: "#F59E0B", alignSelf: "flex-start", marginTop: 2 }}>↻</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Add to Calendar */}
+              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "18px 20px", boxShadow: c.cardShadow }}>
+                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text, marginBottom: 12 }}>Export Schedule</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                  {[
+                    { icon: "googleCal", label: "Google Calendar" },
+                    { icon: "calendar",  label: "Apple Calendar" },
+                    { icon: "download",  label: "Download .ics" },
+                  ].map((opt) => (
+                    <button key={opt.label}
+                      style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 12px", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 10, cursor: "pointer", fontFamily: "Inter", fontSize: 12, fontWeight: 500, color: c.textMuted, transition: "all 0.14s ease" }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = c.primary; (e.currentTarget as HTMLElement).style.color = c.primary; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = c.border; (e.currentTarget as HTMLElement).style.color = c.textMuted; }}
+                    >
+                      <Ic n={opt.icon} size={14} color="currentColor" /> {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

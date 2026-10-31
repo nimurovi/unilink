@@ -1,0 +1,1373 @@
+Continue building the existing UniLink project from the current Figma design.
+
+IMPORTANT — PRESERVE THE EXISTING UNILINK DESIGN
+
+Do NOT redesign, replace, delete, or modify any existing UniLink screens, components, navigation, or design system.
+
+Preserve:
+
+- UniLink brand and logo
+- Existing white + blue visual direction
+- Existing typography
+- Existing components
+- Existing sidebar
+- Existing navigation
+- Existing Light Mode
+- Existing Dark Mode
+- Existing animation language
+- Existing responsive behavior
+- Existing Student Dashboard
+- My Courses
+- Course Details
+- Routine
+- Assignments
+- Assignment Details
+- Assignment Submission
+- Exams & Deadlines
+- Exam Details
+- Exam Calendar
+- Class Materials
+- Material Preview
+- Saved Materials
+- Announcements
+- Announcement Details
+- Events
+- Event Details
+- Campus Calendar
+- Saved Events
+- Clubs & Communities
+- Club Details
+- My Clubs
+- Club Membership
+- Opportunities
+- Opportunity Details
+- Saved Opportunities
+- My Applications
+- Lost & Found
+- Item Details
+- Report Lost Item
+- Report Found Item
+- My Reports
+- Saved Items
+- Claim / Return Flow
+- Notifications
+- Notification Details
+- Notification Settings
+- CR Dashboard
+- CR Routine Management
+
+Reuse the existing UniLink components and visual language.
+
+Do NOT create a new design system.
+
+==================================================
+MODULE — STUDENT DIRECTORY
+==================================================
+
+Create a modern Student Directory where students can discover classmates and other students within their university.
+
+The directory should allow students to find people based on:
+
+- Name
+- Department
+- Program
+- Batch
+- Section
+- Skills
+- Interests
+- Clubs
+- Academic context
+
+The purpose is academic and campus networking.
+
+It should NOT become a social-media platform.
+
+Create NEW Student Portal screens:
+
+1. STUDENT DIRECTORY
+2. STUDENT PROFILE
+3. MY PROFILE
+4. PROFILE EDIT
+5. PRIVACY / PROFILE VISIBILITY STATES
+
+==================================================
+NAVIGATION
+==================================================
+
+Use the existing Student Portal sidebar.
+
+Active navigation:
+
+CAMPUS
+→ Student Directory
+
+Do NOT create a new sidebar.
+
+==================================================
+SCREEN 1 — STUDENT DIRECTORY
+==================================================
+
+Create:
+
+Student Directory
+
+Subtitle:
+
+"Find classmates, discover shared interests, and connect with students across campus."
+
+At the top:
+
+Search:
+
+"Search students by name, skill, interest..."
+
+Optional action:
+
+[ My Profile ]
+
+==================================================
+DIRECTORY SUMMARY
+==================================================
+
+Create compact summary information:
+
+Students
+2,480
+
+Departments
+8
+
+Batches
+12
+
+Active Communities
+24
+
+Use existing UniLink statistics components where appropriate.
+
+Do not overuse cards.
+
+==================================================
+SEARCH
+==================================================
+
+Search should support:
+
+Name
+Student ID display name where permitted
+Department
+Program
+Skill
+Interest
+Club
+
+Example:
+
+Search:
+"Rahim"
+
+Results:
+
+Rahim Ahmed
+CSE
+Batch 52
+Section B
+
+==================================================
+FILTERS
+==================================================
+
+Create filters:
+
+Department
+
+Program
+
+Batch
+
+Section
+
+Skills
+
+Interests
+
+Clubs
+
+Use existing UniLink filter components.
+
+Example:
+
+Department:
+CSE
+
+Batch:
+52
+
+Section:
+B
+
+Skill:
+Python
+
+==================================================
+DIRECTORY TABS
+==================================================
+
+Create:
+
+All Students
+My Batch
+My Section
+My Department
+My Clubs
+
+Active:
+
+All Students
+
+Use the existing UniLink tab style.
+
+==================================================
+STUDENT CARDS
+==================================================
+
+Create a responsive student directory grid/list.
+
+Example:
+
+Student avatar
+
+Naimur Hossen Ovi
+
+CSE
+Batch 52
+Section B
+
+Skills:
+
+Python
+React
+Database
+
+Interests:
+
+AI
+Web Development
+
+Club:
+
+CSE Programming Club
+
+[View Profile]
+
+Do NOT expose phone number or personal email.
+
+==================================================
+STUDENT CARD DESIGN
+==================================================
+
+Each card should contain:
+
+- Avatar
+- Name
+- Department
+- Program
+- Batch
+- Section
+- Selected skills
+- Selected interests
+- Club/community badges where appropriate
+- Profile visibility indicator if needed
+- View Profile action
+
+On hover:
+
+- Slight elevation
+- Subtle blue border
+- Minimal arrow movement
+
+Reuse existing UniLink interactions.
+
+==================================================
+ONLINE / ACTIVE STATUS
+==================================================
+
+Do NOT create social-media-style "online now" indicators by default.
+
+If needed, use only:
+
+Recently Active
+
+or
+
+Available for Networking
+
+based on the student's privacy settings.
+
+==================================================
+SKILL DISCOVERY
+==================================================
+
+Create:
+
+Find Students By Skill
+
+Example skills:
+
+Python
+JavaScript
+React
+Java
+C++
+UI/UX
+Data Science
+Machine Learning
+Cybersecurity
+Research
+Public Speaking
+
+Clicking a skill should filter the directory.
+
+==================================================
+INTEREST DISCOVERY
+==================================================
+
+Create:
+
+Find Students By Interest
+
+Examples:
+
+Artificial Intelligence
+Programming
+Robotics
+Photography
+Entrepreneurship
+Research
+Sports
+Design
+Debate
+
+Clicking an interest should filter the directory.
+
+==================================================
+MY BATCH
+==================================================
+
+Create a quick discovery state:
+
+My Batch
+
+Batch 52
+
+Show:
+
+Students from the student's current batch.
+
+Filters:
+
+All Sections
+Section A
+Section B
+Section C
+
+==================================================
+MY SECTION
+==================================================
+
+Create:
+
+My Section
+
+Batch 52
+Section B
+
+Show classmates.
+
+Keep the layout compact and useful.
+
+==================================================
+MY DEPARTMENT
+==================================================
+
+Create:
+
+My Department
+
+Computer Science & Engineering
+
+Show students across different batches.
+
+Filters:
+
+Batch
+Program
+Skills
+Interests
+
+==================================================
+SCREEN 2 — STUDENT PROFILE
+==================================================
+
+Create a detailed student profile page.
+
+Example:
+
+Naimur Hossen Ovi
+
+CSE
+Batch 52
+Section B
+
+==================================================
+PROFILE HEADER
+==================================================
+
+Show:
+
+Avatar
+
+Name
+
+Department:
+Computer Science & Engineering
+
+Program:
+BSc in CSE
+
+Batch:
+52
+
+Section:
+B
+
+Profile completion indicator if applicable.
+
+Primary:
+
+[ Connect ]
+
+Secondary:
+
+[ Share Profile ]
+
+Do NOT create follower/following counts.
+
+==================================================
+ABOUT
+==================================================
+
+Create:
+
+About
+
+Example:
+
+"Computer Science student interested in software development, artificial intelligence, and technology."
+
+Keep it concise.
+
+==================================================
+ACADEMIC INFORMATION
+==================================================
+
+Create:
+
+Academic Information
+
+Department
+CSE
+
+Program
+BSc in CSE
+
+Batch
+52
+
+Section
+B
+
+Semester
+Spring 2026
+
+Only show information allowed by privacy settings.
+
+==================================================
+SKILLS
+==================================================
+
+Create:
+
+Skills
+
+Python
+JavaScript
+React
+SQL
+Git
+
+Use existing tags/badges.
+
+==================================================
+INTERESTS
+==================================================
+
+Create:
+
+Interests
+
+Artificial Intelligence
+Web Development
+Competitive Programming
+Research
+
+==================================================
+CLUBS & COMMUNITIES
+==================================================
+
+Create:
+
+Clubs & Communities
+
+CSE Programming Club
+✓ Member
+
+Robotics Club
+✓ Member
+
+Connect with the existing Clubs & Communities module.
+
+Do NOT redesign Clubs & Communities.
+
+==================================================
+COURSES
+==================================================
+
+Create:
+
+Current Courses
+
+CSE 305
+Database Management
+
+CSE 301
+Algorithms
+
+CSE 310
+Software Engineering
+
+Allow course names to link to existing Course Details.
+
+Do NOT expose grades or sensitive academic performance.
+
+==================================================
+ACHIEVEMENTS
+==================================================
+
+Create:
+
+Achievements
+
+Examples:
+
+Hackathon Finalist
+Programming Contest Participant
+Research Poster Presenter
+
+Keep this professional.
+
+Do NOT turn it into a gaming achievement system.
+
+==================================================
+EVENTS / ACTIVITY
+==================================================
+
+Create a subtle:
+
+Campus Activity
+
+Examples:
+
+Attended AI Workshop
+Joined Programming Club
+Participated in Hackathon
+
+This should NOT become a public social feed.
+
+==================================================
+CONNECT ACTION
+==================================================
+
+When clicking:
+
+Connect
+
+Show:
+
+Connect with Naimur Hossen Ovi?
+
+"Send a connection request through UniLink."
+
+Optional message:
+
+[Write a short message...]
+
+Buttons:
+
+[Send Request]
+
+[Cancel]
+
+==================================================
+CONNECTION STATES
+==================================================
+
+Support:
+
+Connect
+
+Request Sent
+
+Connected
+
+Declined
+
+Blocked
+
+For Request Sent:
+
+[Cancel Request]
+
+For Connected:
+
+[Connected]
+
+==================================================
+BLOCK USER
+==================================================
+
+Create:
+
+Block Student
+
+"Blocked students will not be able to connect with you through UniLink."
+
+Buttons:
+
+[Block]
+
+[Cancel]
+
+Do NOT make blocking visually aggressive.
+
+==================================================
+REPORT PROFILE
+==================================================
+
+Create:
+
+Report Student
+
+Reasons:
+
+Inappropriate Content
+Impersonation
+Harassment
+False Information
+Other
+
+Button:
+
+[Submit Report]
+
+Do NOT create a complex moderation dashboard.
+
+==================================================
+SCREEN 3 — MY PROFILE
+==================================================
+
+Create:
+
+My Profile
+
+Subtitle:
+
+"Manage the information students can see about you."
+
+Show profile preview:
+
+Avatar
+
+Name
+
+Department
+
+Batch
+
+Section
+
+Skills
+
+Interests
+
+Clubs
+
+Achievements
+
+Primary:
+
+[Edit Profile]
+
+Secondary:
+
+[Privacy Settings]
+
+==================================================
+PROFILE COMPLETION
+==================================================
+
+Create a subtle profile completion widget.
+
+Example:
+
+Profile Completion
+
+80%
+
+Missing:
+
+Bio
+2 skills
+
+[Complete Profile]
+
+Do not make it look like a gaming progress system.
+
+==================================================
+SCREEN 4 — EDIT PROFILE
+==================================================
+
+Create:
+
+Edit Profile
+
+==================================================
+BASIC INFORMATION
+==================================================
+
+Allow editing:
+
+Profile Photo
+
+Display Name
+
+Bio
+
+Academic information should be system-managed where appropriate.
+
+Do NOT allow students to freely edit verified academic identity information such as:
+
+Department
+Program
+Batch
+Section
+
+Instead show:
+
+Managed by University
+
+==================================================
+SKILLS
+==================================================
+
+Create:
+
+Add Skills
+
+Search:
+
+"Search skills..."
+
+Examples:
+
+Python
+Java
+React
+SQL
+C++
+Machine Learning
+
+Allow:
+
+Add
+Remove
+Reorder
+
+==================================================
+INTERESTS
+==================================================
+
+Create:
+
+Interests
+
+Select interests that help UniLink personalize recommendations.
+
+Examples:
+
+AI
+Programming
+Research
+Design
+Entrepreneurship
+Sports
+Photography
+
+==================================================
+CLUBS
+==================================================
+
+Show:
+
+My Clubs
+
+These should come from actual memberships.
+
+Do NOT allow students to manually claim membership.
+
+Button:
+
+[Manage Clubs]
+
+Connect to existing My Clubs.
+
+==================================================
+ACHIEVEMENTS
+==================================================
+
+Create:
+
+Add Achievement
+
+Fields:
+
+Title
+
+Description
+
+Date
+
+Optional Evidence / Link
+
+Button:
+
+[Add Achievement]
+
+Keep achievement verification as a future backend concept.
+
+==================================================
+SOCIAL / PROFESSIONAL LINKS
+==================================================
+
+Optional fields:
+
+GitHub
+LinkedIn
+Portfolio
+Personal Website
+
+These should be optional.
+
+==================================================
+SAVE PROFILE
+==================================================
+
+Primary:
+
+[Save Changes]
+
+Secondary:
+
+[Cancel]
+
+Success:
+
+✓ Profile Updated
+
+==================================================
+SCREEN 5 — PRIVACY / PROFILE VISIBILITY
+==================================================
+
+Create:
+
+Profile Visibility
+
+Subtitle:
+
+"Control what other students can see about you."
+
+==================================================
+PROFILE VISIBILITY
+==================================================
+
+Options:
+
+University Students
+
+My Department
+
+My Batch
+
+My Section
+
+Private
+
+Default:
+
+University Students
+
+Explain:
+
+"Students outside your selected visibility group will not see your profile details."
+
+==================================================
+FIELD VISIBILITY
+==================================================
+
+Create individual controls:
+
+Bio
+Visible
+
+Skills
+Visible
+
+Interests
+Visible
+
+Clubs
+Visible
+
+Achievements
+Visible
+
+Professional Links
+Hidden
+
+Academic Information
+Visible
+
+Allow each to be changed.
+
+==================================================
+CONTACT INFORMATION
+==================================================
+
+IMPORTANT:
+
+Phone number and personal email should NOT be publicly displayed.
+
+If UniLink supports communication:
+
+Use:
+
+[Message through UniLink]
+
+instead of exposing contact details.
+
+==================================================
+PROFILE DISCOVERY
+==================================================
+
+Create:
+
+Allow students to find me in Student Directory
+
+ON
+
+If disabled:
+
+"This will hide your profile from directory search."
+
+==================================================
+CONNECTION REQUESTS
+==================================================
+
+Options:
+
+Allow requests from:
+
+Everyone within visibility range
+
+My Department
+
+My Batch
+
+Nobody
+
+==================================================
+BLOCKED STUDENTS
+==================================================
+
+Create:
+
+Blocked Students
+
+Show:
+
+Blocked Student Name
+
+[Unblock]
+
+==================================================
+PRIVACY CONFIRMATION
+==================================================
+
+When changing important visibility settings:
+
+Show a subtle confirmation:
+
+Update Profile Visibility?
+
+[Save Changes]
+
+[Cancel]
+
+==================================================
+PROFILE STATES
+==================================================
+
+Create alternate profile states:
+
+Complete Profile
+
+Incomplete Profile
+
+Private Profile
+
+Profile Not Found
+
+Blocked Profile
+
+Example:
+
+This profile is private.
+
+"The student has limited their profile visibility."
+
+==================================================
+PROFILE NOT FOUND
+==================================================
+
+Create:
+
+Student Not Found
+
+"This profile may have been removed, disabled, or is no longer available."
+
+[Back to Directory]
+
+==================================================
+DIRECTORY EMPTY STATES
+==================================================
+
+Create:
+
+No Students Found
+
+"No students match your current search or filters."
+
+[Clear Filters]
+
+==================================================
+MY BATCH EMPTY STATE
+==================================================
+
+If no students are available:
+
+"No classmates found."
+
+==================================================
+SKILL SEARCH EMPTY STATE
+==================================================
+
+Example:
+
+No students found with this skill.
+
+Try another skill or remove the filter.
+
+==================================================
+LOADING STATES
+==================================================
+
+Create skeleton states for:
+
+- Student directory
+- Student profile
+- My profile
+- Search results
+
+Reuse existing UniLink loading components.
+
+==================================================
+ERROR STATES
+==================================================
+
+Create:
+
+Unable to load Student Directory.
+
+[Try Again]
+
+Unable to load profile.
+
+[Try Again]
+
+Unable to update profile.
+
+[Try Again]
+
+Unable to send connection request.
+
+[Try Again]
+
+Use existing UniLink error components.
+
+==================================================
+NOTIFICATIONS CONNECTION
+==================================================
+
+Connect Student Directory with existing Notifications.
+
+Examples:
+
+"Your connection request was accepted."
+
+"You received a new connection request."
+
+"Your profile was updated."
+
+Do NOT create a separate notification system.
+
+==================================================
+CLUB CONNECTION
+==================================================
+
+Student Profile:
+
+→ Clubs & Communities
+
+Club membership:
+
+→ Club Details
+
+Do NOT redesign the Clubs module.
+
+==================================================
+COURSE CONNECTION
+==================================================
+
+Student Profile:
+
+→ Current Courses
+
+Course:
+
+→ Existing Course Details
+
+Do NOT expose grades, attendance, or private academic records.
+
+==================================================
+OPPORTUNITIES CONNECTION
+==================================================
+
+Use profile skills/interests to conceptually support:
+
+Recommended Opportunities
+
+Do NOT redesign Opportunities.
+
+==================================================
+LIGHT MODE
+==================================================
+
+Use the existing UniLink Light Mode.
+
+Do NOT introduce new colors.
+
+Reuse:
+
+White
+Light Blue
+Primary Blue
+Deep Navy
+Neutral Gray
+
+==================================================
+DARK MODE
+==================================================
+
+Create the same screens in the existing UniLink Dark Mode.
+
+Do NOT redesign the layout.
+
+Adapt:
+
+Background
+Surface
+Text
+Borders
+Shadows
+Active states
+
+==================================================
+RESPONSIVE DESIGN
+==================================================
+
+Create mobile versions around 390px width.
+
+STUDENT DIRECTORY MOBILE:
+
+- Search at top
+- Horizontal filters
+- Compact student cards
+- One-column layout
+- Touch-friendly buttons
+
+STUDENT PROFILE MOBILE:
+
+- Compact profile header
+- Connect button
+- Scrollable sections
+- Skills and interests
+- Clubs
+- Courses
+- Achievements
+
+EDIT PROFILE MOBILE:
+
+- Single-column form
+- Touch-friendly inputs
+- Easy skill/interest selection
+
+PRIVACY MOBILE:
+
+- Grouped settings
+- Large touch-friendly toggles
+- Clear visibility descriptions
+
+==================================================
+ANIMATIONS
+==================================================
+
+Use the existing UniLink animation language.
+
+Use only subtle animations for:
+
+- Search/filter transitions
+- Profile opening
+- Connect request
+- Save changes
+- Privacy setting updates
+
+Avoid:
+
+- Bouncy animations
+- Excessive motion
+- Neon effects
+- Social-media-like animations
+
+==================================================
+ACCESSIBILITY
+==================================================
+
+Ensure:
+
+- Strong text hierarchy
+- Good contrast
+- Keyboard-friendly controls
+- Clear labels
+- Touch-friendly buttons
+- Status not communicated by color alone
+
+==================================================
+PRIVACY & SAFETY
+==================================================
+
+This module must prioritize student privacy.
+
+Never publicly expose:
+
+- Phone numbers
+- Personal email addresses
+- Student ID numbers unless explicitly allowed
+- Home addresses
+- Private academic records
+- Grades
+- Private messages
+- Sensitive personal information
+
+Verified academic information should be system-managed.
+
+Students should control profile visibility.
+
+==================================================
+DESIGN QUALITY
+==================================================
+
+The final experience should feel like a professional university networking directory.
+
+It should communicate:
+
+"Find the right people on campus without sacrificing privacy."
+
+Prioritize:
+
+- Academic networking
+- Discoverability
+- Privacy
+- Clean profiles
+- Useful search
+- Skills and interests
+- Campus community
+
+Avoid:
+
+- Social media feed aesthetics
+- Followers/following
+- Likes
+- Public comments
+- Reactions
+- Public popularity scores
+- Gamification
+- Excessive cards
+- Excessive colors
+- Heavy shadows
+- Neon effects
+- Excessive gradients
+
+==================================================
+IMPORTANT
+==================================================
+
+Create these as NEW Student Portal screens/states.
+
+Do NOT redesign previously completed screens.
+
+Do NOT create a new sidebar.
+
+Do NOT create a new design system.
+
+Connect Student Directory with:
+
+Student Dashboard
+Courses
+Clubs & Communities
+Opportunities
+Notifications
+Student Profile
+
+After completing these screens, stop.
+
+Do NOT start designing Settings yet.

@@ -1,0 +1,158 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useTheme, tok } from "@/components/ui/Theme";
+
+export default function LoginPage() {
+    const { theme, toggle } = useTheme();
+    const c = tok(theme);
+    const router = useRouter();
+
+    const [role, setRole] = useState<"student" | "cr">("student");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email || !password) {
+            setError("Please fill in all fields");
+            return;
+        }
+        setError("");
+        setLoading(true);
+        setTimeout(() => {
+            setLoading(false);
+            if (role === "cr") {
+                router.push("/cr-portal");
+            } else {
+                router.push("/dashboard");
+            }
+        }, 600);
+    };
+
+    const handleQuickLogin = (selectedRole: "student" | "cr") => {
+        setLoading(true);
+        setTimeout(() => {
+            setLoading(false);
+            if (selectedRole === "cr") {
+                router.push("/cr-portal");
+            } else {
+                router.push("/dashboard");
+            }
+        }, 400);
+    };
+
+    return (
+        <div style={{ minHeight: "100vh", background: c.bg, color: c.text, display: "flex", flexDirection: "column", fontFamily: "Inter, sans-serif" }}>
+            {/* Navbar header */}
+            <header style={{ height: 64, borderBottom: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 32px" }}>
+                <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+                    <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, ${c.sky})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+                            <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                            <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="#fff" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                    </div>
+                    <span style={{ fontFamily: "Manrope, sans-serif", fontWeight: 800, fontSize: 18, color: c.text }}>UniLink</span>
+                </Link>
+                <button onClick={toggle} style={{ background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 9, padding: "7px 12px", cursor: "pointer", color: c.textMuted, fontSize: 12, fontWeight: 600 }}>
+                    {theme === "light" ? "🌙 Dark" : "☀️ Light"}
+                </button>
+            </header>
+
+            {/* Main Container */}
+            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+                <div style={{ width: "100%", maxWidth: 440, background: c.surface, border: `1px solid ${c.border}`, borderRadius: 24, padding: "36px 32px", boxShadow: c.cardShadow }}>
+                    {/* Header */}
+                    <div style={{ textAlign: "center", marginBottom: 24 }}>
+                        <h1 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 800, fontSize: 24, color: c.text, marginBottom: 8 }}>Welcome back</h1>
+                        <p style={{ fontSize: 13, color: c.textMuted }}>Sign in to UniLink to access your courses, routine, and class updates.</p>
+                    </div>
+
+                    {/* Role selector */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, padding: 4, background: c.surface2, borderRadius: 12, marginBottom: 24, border: `1px solid ${c.border}` }}>
+                        <button type="button" onClick={() => setRole("student")} style={{ padding: "8px 0", borderRadius: 9, border: "none", background: role === "student" ? c.surface : "transparent", color: role === "student" ? c.primary : c.textMuted, fontWeight: 700, fontSize: 12, cursor: "pointer", boxShadow: role === "student" ? c.cardShadow : "none", transition: "all 0.15s" }}>
+                            Student Login
+                        </button>
+                        <button type="button" onClick={() => setRole("cr")} style={{ padding: "8px 0", borderRadius: 9, border: "none", background: role === "cr" ? c.surface : "transparent", color: role === "cr" ? c.primary : c.textMuted, fontWeight: 700, fontSize: 12, cursor: "pointer", boxShadow: role === "cr" ? c.cardShadow : "none", transition: "all 0.15s" }}>
+                            CR Portal Login
+                        </button>
+                    </div>
+
+                    {error && (
+                        <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#EF4444", fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div>
+                            <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>
+                                {role === "cr" ? "CR Institutional Email / Student ID" : "Student Email or ID"}
+                            </label>
+                            <input
+                                type="text"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder={role === "cr" ? "cr.cse52b@unilink.edu" : "student@unilink.edu"}
+                                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box" }}
+                            />
+                        </div>
+
+                        <div>
+                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                                <label style={{ fontSize: 12, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em" }}>Password</label>
+                                <a href="#" onClick={(e) => { e.preventDefault(); alert("Password reset link sent to your registered email."); }} style={{ fontSize: 12, color: c.primary, textDecoration: "none", fontWeight: 600 }}>Forgot?</a>
+                            </div>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                style={{ width: "100%", padding: "10px 14px", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box" }}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            style={{ width: "100%", padding: "11px 0", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontWeight: 700, fontSize: 14, cursor: "pointer", transition: "all 0.15s", opacity: loading ? 0.7 : 1, marginTop: 6 }}
+                        >
+                            {loading ? "Signing in..." : role === "cr" ? "Sign In as CR →" : "Sign In →"}
+                        </button>
+                    </form>
+
+                    {/* Quick Demo Section */}
+                    <div style={{ marginTop: 24, paddingTop: 20, borderTop: `1px solid ${c.border}`, textAlign: "center" }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 12 }}>Quick Demo Access</div>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                                type="button"
+                                onClick={() => handleQuickLogin("student")}
+                                style={{ flex: 1, padding: "8px 10px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+                            >
+                                Demo Student
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleQuickLogin("cr")}
+                                style={{ flex: 1, padding: "8px 10px", borderRadius: 9, background: `${c.primary}12`, border: `1px solid ${c.primary}30`, color: c.primary, fontSize: 12, fontWeight: 700, cursor: "pointer" }}
+                            >
+                                Demo CR Portal
+                            </button>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: 20, textAlign: "center", fontSize: 13, color: c.textMuted }}>
+                        Don't have an account?{" "}
+                        <Link href="/register" style={{ color: c.primary, fontWeight: 600, textDecoration: "none" }}>Sign up</Link>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}

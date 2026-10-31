@@ -1,0 +1,1166 @@
+"use client";
+import { useState, useContext } from "react";
+import { ThemeCtx } from "@/components/ui/Theme";
+
+type Theme = "light" | "dark";
+const useTheme = () => useContext(ThemeCtx);
+
+// ─── TOKENS ────────────────────────────────────────────────────────────────────
+const LIGHT = {
+  bg: "#F8FAFC", surface: "#FFFFFF", surface2: "#F1F5F9", surface3: "#E2E8F0",
+  primary: "#2563EB", primaryDark: "#1D4ED8",
+  text: "#0F172A", textMuted: "#64748B", textDim: "#94A3B8",
+  border: "#E2E8F0",
+  cardShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)",
+  cardHoverShadow: "0 4px 20px rgba(37,99,235,0.12), 0 2px 8px rgba(15,23,42,0.06)",
+  primaryGlow: "rgba(37,99,235,0.14)",
+  activeNav: { bg: "#EFF6FF", text: "#2563EB" },
+  highlight: "#EFF6FF",
+};
+const DARK = {
+  bg: "#080D1A", surface: "#0F172A", surface2: "#172033", surface3: "#1E293B",
+  primary: "#3B82F6", primaryDark: "#2563EB",
+  text: "#F8FAFC", textMuted: "#94A3B8", textDim: "#475569",
+  border: "#1E293B",
+  cardShadow: "0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.18)",
+  cardHoverShadow: "0 4px 24px rgba(59,130,246,0.18), 0 2px 8px rgba(0,0,0,0.3)",
+  primaryGlow: "rgba(59,130,246,0.2)",
+  activeNav: { bg: "rgba(59,130,246,0.14)", text: "#60A5FA" },
+  highlight: "rgba(37,99,235,0.08)",
+};
+const tok = (t: Theme) => t === "light" ? LIGHT : DARK;
+
+// ─── ICONS ─────────────────────────────────────────────────────────────────────
+const P: Record<string, string[]> = {
+  arrow: ["M5 12h14M12 5l7 7-7 7"],
+  arrowLeft: ["M19 12H5M12 19l-7-7 7-7"],
+  search: ["M21 21l-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0z"],
+  plus: ["M12 5v14M5 12h14"],
+  filter: ["M22 3H2l8 9.46V19l4 2v-8.54L22 3z"],
+  check: ["M20 6L9 17l-5-5"],
+  clock: ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z", "M12 6v6l4 2"],
+  book: ["M4 19.5A2.5 2.5 0 0 1 6.5 17H20", "M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"],
+  user: ["M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2", "M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"],
+  map: ["M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z", "M12 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"],
+  file: ["M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z", "M14 2v6h6"],
+  download: ["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M7 10l5 5 5-5", "M12 15V3"],
+  eye: ["M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z", "M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"],
+  bookmark: ["M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"],
+  calendar: ["M8 2v4M16 2v4M3 10h18", "M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"],
+  clipboard: ["M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2", "M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2 2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2z"],
+  megaphone: ["M18 8H7a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h11l4 4V4l-4 4z"],
+  alert: ["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z", "M12 9v4M12 17h.01"],
+  x: ["M18 6L6 18M6 6l12 12"],
+  award: ["M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z", "M8.21 13.89L7 23l5-3 5 3-1.21-9.12"],
+  trending: ["M23 6L13.5 15.5 8.5 10.5 1 18", "M17 6h6v6"],
+  cpu: ["M9 3H5a2 2 0 0 0-2 2v4M9 3h6M9 3v18m6-18h4a2 2 0 0 1 2 2v4m-6-6v18m0 0H9m6 0h4a2 2 0 0 1 2-2v-4M3 9v6m18-6v6M3 15h4m10 0h4"],
+  edit: ["M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7", "M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"],
+  trash: ["M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6", "M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"],
+  upload: ["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4", "M17 8l-5-5-5 5", "M12 3v12"],
+};
+
+function Ic({ n, size = 16, color = "currentColor" }: { n: string; size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      {(P[n] ?? []).map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  );
+}
+
+// ─── SHARED SMALL COMPONENTS ───────────────────────────────────────────────────
+function PrimaryBtn({ children, small, onClick }: { children: React.ReactNode; small?: boolean; onClick?: () => void }) {
+  const { theme } = useTheme();
+  const c = tok(theme);
+  const [hov, setHov] = useState(false);
+  return (
+    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: hov ? c.primaryDark : c.primary, color: "#fff", fontFamily: "Inter", fontWeight: 600, fontSize: small ? 12 : 13, padding: small ? "6px 14px" : "9px 18px", borderRadius: 9, border: "none", cursor: "pointer", transition: "all 0.16s ease", boxShadow: hov ? `0 3px 14px ${c.primaryGlow}` : "none", transform: hov ? "translateY(-1px)" : "none" }}>
+      {children}
+    </button>
+  );
+}
+
+function GhostBtn({ children, small, active, onClick }: { children: React.ReactNode; small?: boolean; active?: boolean; onClick?: () => void }) {
+  const { theme } = useTheme();
+  const c = tok(theme);
+  const [hov, setHov] = useState(false);
+  return (
+    <button onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ display: "inline-flex", alignItems: "center", gap: 6, background: active ? c.activeNav.bg : (hov ? c.surface2 : "transparent"), color: active ? c.primary : (hov ? c.text : c.textMuted), fontFamily: "Inter", fontWeight: active ? 600 : 500, fontSize: small ? 12 : 13, padding: small ? "6px 14px" : "8px 16px", borderRadius: 9, border: `1px solid ${active ? "rgba(37,99,235,0.2)" : c.border}`, cursor: "pointer", transition: "all 0.16s ease" }}>
+      {children}
+    </button>
+  );
+}
+
+function ProgressBar({ pct, color, t }: { pct: number; color?: string; t: Theme }) {
+  const c = tok(t);
+  return (
+    <div style={{ height: 5, background: c.surface2, borderRadius: 3, overflow: "hidden" }}>
+      <div style={{ height: "100%", width: `${pct}%`, background: color ?? `linear-gradient(90deg, ${c.primary}, #38BDF8)`, borderRadius: 3, transition: "width 0.8s ease" }} />
+    </div>
+  );
+}
+
+// ─── COURSE DATA ───────────────────────────────────────────────────────────────
+export type Course = {
+  id: string; code: string; name: string; instructor: string; section: string;
+  semester: string; nextClass: string; assignmentDue: string; progress: number;
+  color: string; icon: string; room: string;
+};
+
+export const COURSES: Course[] = [
+  { id: "cse305", code: "CSE 305", name: "Database Management", instructor: "Dr. Rahman", section: "B", semester: "Spring 2026", nextClass: "Today • 10:00 AM", assignmentDue: "Due Tomorrow", progress: 68, color: "#2563EB", icon: "🗄️", room: "502" },
+  { id: "cse301", code: "CSE 301", name: "Algorithms", instructor: "Dr. Karim", section: "B", semester: "Spring 2026", nextClass: "Today • 12:00 PM", assignmentDue: "Due Friday", progress: 75, color: "#8B5CF6", icon: "⚙️", room: "405" },
+  { id: "cse310", code: "CSE 310", name: "Software Engineering", instructor: "Ms. Sarah", section: "B", semester: "Spring 2026", nextClass: "Today • 3:00 PM", assignmentDue: "Due Sep 2", progress: 82, color: "#10B981", icon: "💻", room: "301" },
+  { id: "cse307", code: "CSE 307", name: "Computer Networks", instructor: "Dr. Ahmed", section: "B", semester: "Spring 2026", nextClass: "Tomorrow • 9:00 AM", assignmentDue: "Due Sep 5", progress: 55, color: "#F59E0B", icon: "🌐", room: "204" },
+  { id: "cse401", code: "CSE 401", name: "Artificial Intelligence", instructor: "Dr. Hasan", section: "B", semester: "Spring 2026", nextClass: "Tomorrow • 11:00 AM", assignmentDue: "Due Sep 8", progress: 60, color: "#EC4899", icon: "🤖", room: "Lab 3" },
+  { id: "cse303", code: "CSE 303", name: "Operating Systems", instructor: "Dr. Rahman", section: "B", semester: "Spring 2026", nextClass: "Wed • 2:00 PM", assignmentDue: "Due Sep 10", progress: 70, color: "#06B6D4", icon: "🖥️", room: "402" },
+];
+
+// ─── COURSE CARD ───────────────────────────────────────────────────────────────
+function CourseCard({ course, t, onOpen }: { course: Course; t: Theme; onOpen: () => void }) {
+  const c = tok(t);
+  const [hov, setHov] = useState(false);
+  const dueSoon = course.assignmentDue.toLowerCase().includes("tomorrow");
+
+  return (
+    <div
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      onClick={onOpen}
+      style={{
+        background: c.surface, border: `1px solid ${hov ? course.color + "55" : c.border}`,
+        borderRadius: 18, overflow: "hidden", cursor: "pointer",
+        boxShadow: hov ? c.cardHoverShadow : c.cardShadow,
+        transform: hov ? "translateY(-3px)" : "none",
+        transition: "all 0.22s ease",
+      }}
+    >
+      {/* Color bar + icon */}
+      <div style={{ height: 6, background: course.color }} />
+      <div style={{ padding: "20px 22px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 13, background: `${course.color}15`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+            {course.icon}
+          </div>
+          <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: `${course.color}15`, color: course.color, border: `1px solid ${course.color}30` }}>
+            {course.code}
+          </span>
+        </div>
+
+        <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 4 }}>{course.name}</h3>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 14 }}>
+          <Ic n="user" size={12} color={c.textDim} />
+          <span style={{ fontSize: 12, color: c.textMuted }}>{course.instructor}</span>
+          <span style={{ fontSize: 12, color: c.textDim }}>· Section {course.section}</span>
+        </div>
+
+        {/* Info rows */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <Ic n="clock" size={12} color={c.textDim} />
+            <span style={{ fontSize: 12, color: c.textMuted }}>Next: {course.nextClass}</span>
+          </div>
+          <div style={{ display: "flex", gap: 7, alignItems: "center" }}>
+            <Ic n="clipboard" size={12} color={dueSoon ? "#EF4444" : c.textDim} />
+            <span style={{ fontSize: 12, color: dueSoon ? "#EF4444" : c.textMuted, fontWeight: dueSoon ? 600 : 400 }}>{course.assignmentDue}</span>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+            <span style={{ fontSize: 11, color: c.textDim }}>Progress</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{course.progress}%</span>
+          </div>
+          <ProgressBar pct={course.progress} color={course.color} t={t} />
+        </div>
+
+        {/* Footer */}
+        <div style={{ paddingTop: 14, borderTop: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, color: c.textDim }}>{course.semester}</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: hov ? course.color : c.primary, display: "flex", alignItems: "center", gap: 4, transition: "all 0.16s ease" }}>
+            View Course <span style={{ transform: hov ? "translateX(3px)" : "none", transition: "transform 0.16s ease", display: "inline-flex" }}><Ic n="arrow" size={12} color={hov ? course.color : c.primary} /></span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MY COURSES PAGE ───────────────────────────────────────────────────────────
+export function MyCourses({ onOpenCourse }: { onOpenCourse: (course: Course) => void }) {
+  const { theme } = useTheme();
+  const t = theme;
+  const c = tok(t);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState<"All" | "Active" | "Completed">("All");
+
+  const filtered = COURSES.filter((course) => {
+    const matchQ = query === "" || course.name.toLowerCase().includes(query.toLowerCase()) || course.code.toLowerCase().includes(query.toLowerCase()) || course.instructor.toLowerCase().includes(query.toLowerCase());
+    const matchF = filter === "All" || filter === "Active";
+    return matchQ && matchF;
+  });
+
+  const stats = [
+    { label: "Total Courses", value: "6", sub: "This semester", icon: "📚", color: c.primary, bg: `rgba(37,99,235,0.1)` },
+    { label: "Active Courses", value: "6", sub: "In progress", icon: "✅", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
+    { label: "Assignments Due", value: "4", sub: "This week", icon: "📝", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
+    { label: "Upcoming Exams", value: "2", sub: "Next 30 days", icon: "📊", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px 80px", background: c.bg }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+
+        {/* Page header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+          <div>
+            <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 26, color: c.text, letterSpacing: "-0.02em", marginBottom: 5 }}>My Courses</h1>
+            <p style={{ fontSize: 14, color: c.textMuted }}>Manage your current courses, materials, assignments, and academic activities.</p>
+          </div>
+          <PrimaryBtn>
+            <Ic n="plus" size={14} color="#fff" /> Add / Join Course
+          </PrimaryBtn>
+        </div>
+
+        {/* Stat cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+          {stats.map((s) => (
+            <div key={s.label} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 12, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
+              <div>
+                <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 22, color: s.color, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: c.text, marginTop: 2 }}>{s.label}</div>
+                <div style={{ fontSize: 11, color: c.textDim }}>{s.sub}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Search + filters */}
+        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 24, flexWrap: "wrap" }}>
+          {/* Search */}
+          <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
+            <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}>
+              <Ic n="search" size={15} color={c.textDim} />
+            </div>
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search courses..."
+              style={{ width: "100%", padding: "10px 14px 10px 40px", borderRadius: 10, background: c.surface, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none" }}
+            />
+            {query && (
+              <button onClick={() => setQuery("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer" }}>
+                <Ic n="x" size={13} color={c.textDim} />
+              </button>
+            )}
+          </div>
+
+          {/* Status filters */}
+          <div style={{ display: "flex", gap: 6 }}>
+            {(["All", "Active", "Completed"] as const).map((f) => (
+              <GhostBtn key={f} active={filter === f} onClick={() => setFilter(f)} small>{f}</GhostBtn>
+            ))}
+          </div>
+
+          {/* Semester select */}
+          <select style={{ padding: "9px 14px", borderRadius: 10, background: c.surface, border: `1px solid ${c.border}`, color: c.textMuted, fontSize: 13, fontWeight: 500, outline: "none", cursor: "pointer", fontFamily: "Inter" }}>
+            <option>Spring 2026</option>
+            <option>Fall 2025</option>
+          </select>
+
+          <span style={{ fontSize: 12, color: c.textDim, marginLeft: 4 }}>{filtered.length} course{filtered.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {/* Course grid */}
+        {filtered.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 18 }}>
+            {filtered.map((course) => (
+              <CourseCard key={course.id} course={course} t={t} onOpen={() => onOpenCourse(course)} />
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: "center", padding: "80px 32px", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18 }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📚</div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 18, color: c.text, marginBottom: 8 }}>No courses found</div>
+            <div style={{ fontSize: 14, color: c.textMuted, marginBottom: 22 }}>Try adjusting your search or filter.</div>
+            <GhostBtn onClick={() => { setQuery(""); setFilter("All"); }}>Clear filters</GhostBtn>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── COURSE DETAIL PAGE ────────────────────────────────────────────────────────
+type CourseTab = "overview" | "materials" | "assignments" | "exams" | "announcements";
+
+export function CourseDetail({ course, onBack }: { course: Course; onBack: () => void }) {
+  const { theme } = useTheme();
+  const t = theme;
+  const c = tok(t);
+  const [tab, setTab] = useState<CourseTab>("overview");
+
+  const tabs: { id: CourseTab; label: string; icon: string }[] = [
+    { id: "overview", label: "Overview", icon: "book" },
+    { id: "materials", label: "Materials", icon: "file" },
+    { id: "assignments", label: "Assignments", icon: "clipboard" },
+    { id: "exams", label: "Exams", icon: "award" },
+    { id: "announcements", label: "Announcements", icon: "megaphone" },
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", background: c.bg, display: "flex", flexDirection: "column" }}>
+      {/* Course header */}
+      <div style={{ background: c.surface, borderBottom: `1px solid ${c.border}`, padding: "24px 32px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          {/* Back */}
+          <button onClick={onBack} style={{ display: "inline-flex", alignItems: "center", gap: 7, background: "none", border: "none", cursor: "pointer", color: c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 500, marginBottom: 18, padding: 0, transition: "color 0.16s ease" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = c.text)}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = c.textMuted)}
+          >
+            <Ic n="arrowLeft" size={15} color={c.textMuted} /> My Courses
+          </button>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 20 }}>
+            <div style={{ display: "flex", gap: 18, alignItems: "flex-start" }}>
+              {/* Icon */}
+              <div style={{ width: 60, height: 60, borderRadius: 16, background: `${course.color}15`, border: `1px solid ${course.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>
+                {course.icon}
+              </div>
+              <div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
+                  <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 22, color: c.text, letterSpacing: "-0.02em" }}>{course.name}</h1>
+                  <span style={{ padding: "3px 10px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${course.color}15`, color: course.color, border: `1px solid ${course.color}30` }}>{course.code}</span>
+                </div>
+                {/* Meta chips */}
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+                  {[
+                    { icon: "user", val: course.instructor },
+                    { icon: "book", val: `Section ${course.section}` },
+                    { icon: "calendar", val: course.semester },
+                    { icon: "map", val: `Room ${course.room}` },
+                    { icon: "clock", val: course.nextClass },
+                  ].map((m) => (
+                    <div key={m.val} style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                      <Ic n={m.icon} size={13} color={c.textDim} />
+                      <span style={{ fontSize: 13, color: c.textMuted }}>{m.val}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <PrimaryBtn onClick={() => setTab("overview")}>
+              <Ic n="calendar" size={14} color="#fff" /> View Routine
+            </PrimaryBtn>
+          </div>
+
+          {/* Progress bar in header */}
+          <div style={{ marginTop: 20, display: "flex", gap: 16, alignItems: "center" }}>
+            <span style={{ fontSize: 12, color: c.textDim, flexShrink: 0 }}>Course Progress</span>
+            <div style={{ flex: 1 }}>
+              <ProgressBar pct={course.progress} color={course.color} t={t} />
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: c.text, flexShrink: 0 }}>{course.progress}%</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ background: c.surface, borderBottom: `1px solid ${c.border}` }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 32px", display: "flex", gap: 2, overflowX: "auto" }}>
+          {tabs.map((tb) => (
+            <button key={tb.id} onClick={() => setTab(tb.id)} style={{
+              display: "flex", alignItems: "center", gap: 7, padding: "13px 18px",
+              background: "none", border: "none", cursor: "pointer", whiteSpace: "nowrap",
+              fontFamily: "Inter", fontSize: 13, fontWeight: tab === tb.id ? 600 : 500,
+              color: tab === tb.id ? c.primary : c.textMuted,
+              borderBottom: `2px solid ${tab === tb.id ? c.primary : "transparent"}`,
+              transition: "all 0.18s ease",
+            }}>
+              <Ic n={tb.icon} size={14} color={tab === tb.id ? c.primary : c.textDim} />
+              {tb.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div style={{ flex: 1, padding: "28px 32px 80px" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+          {tab === "overview" && <OverviewTab course={course} t={t} setTab={setTab} />}
+          {tab === "materials" && <MaterialsTab t={t} />}
+          {tab === "assignments" && <AssignmentsTab t={t} />}
+          {tab === "exams" && <ExamsTab t={t} />}
+          {tab === "announcements" && <AnnouncementsTab t={t} />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── OVERVIEW TAB ──────────────────────────────────────────────────────────────
+function OverviewTab({ course, t, setTab }: { course: Course; t: Theme; setTab: (tab: CourseTab) => void }) {
+  const c = tok(t);
+
+  const upcoming = [
+    { title: "Assignment 02", due: "Due Tomorrow", urgency: "#EF4444", icon: "📝" },
+    { title: "Quiz 03", due: "Sep 2", urgency: "#F59E0B", icon: "📋" },
+    { title: "Midterm Examination", due: "Sep 10", urgency: "#8B5CF6", icon: "📊" },
+  ];
+
+  const materials = [
+    { title: "Lecture 05 — SQL Joins", type: "PDF", time: "2 hours ago", by: "Dr. Rahman" },
+    { title: "Lecture 04 — Normalization", type: "PDF", time: "Yesterday", by: "Dr. Rahman" },
+    { title: "Database Design Notes", type: "PDF", time: "3 days ago", by: "Dr. Rahman" },
+  ];
+
+  const announcements = [
+    { title: "Midterm syllabus updated", by: "Dr. Rahman", time: "2 hours ago", priority: "high" },
+    { title: "Classroom changed for tomorrow", by: "Dr. Rahman", time: "Yesterday", priority: "medium" },
+  ];
+
+  const progress = [
+    { label: "Lectures", pct: 72, color: c.primary },
+    { label: "Assignments", pct: 60, color: "#F59E0B" },
+    { label: "Materials", pct: 80, color: "#10B981" },
+    { label: "Attendance", pct: 75, color: "#8B5CF6" },
+  ];
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 22 }}>
+      {/* Left */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+        {/* Description */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 10 }}>Course Description</div>
+          <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.7 }}>
+            Introduction to database concepts, relational models, SQL, database design, normalization, transactions, and database management systems.
+          </p>
+        </div>
+
+        {/* Course info */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 16 }}>Course Information</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {[
+              { label: "Instructor", val: "Dr. Rahman", icon: "user" },
+              { label: "Schedule", val: "Sun / Tue · 10:00–11:30 AM", icon: "calendar" },
+              { label: "Room", val: course.room, icon: "map" },
+              { label: "Credits", val: "3", icon: "award" },
+            ].map((info) => (
+              <div key={info.label} style={{ background: c.surface2, borderRadius: 12, padding: "14px 16px", border: `1px solid ${c.border}` }}>
+                <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 5 }}>
+                  <Ic n={info.icon} size={13} color={c.textDim} />
+                  <span style={{ fontSize: 11, color: c.textDim, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>{info.label}</span>
+                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{info.val}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Upcoming activities */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 16 }}>Upcoming</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {upcoming.map((u, i) => (
+              <div key={i} style={{ display: "flex", gap: 14, padding: "12px 14px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}`, alignItems: "center" }}>
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${u.urgency}12`, border: `1px solid ${u.urgency}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{u.icon}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{u.title}</div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, color: u.urgency, background: `${u.urgency}12`, padding: "3px 10px", borderRadius: 999, whiteSpace: "nowrap" }}>{u.due}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent materials */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Recent Materials</div>
+            <button onClick={() => setTab("materials")} style={{ fontSize: 12, color: c.primary, fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>View All →</button>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {materials.map((m, i) => (
+              <div key={i} style={{ display: "flex", gap: 12, padding: "11px 14px", background: c.surface2, borderRadius: 11, border: `1px solid ${c.border}`, alignItems: "center", cursor: "pointer", transition: "border-color 0.16s ease" }}
+                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = c.primary)}
+                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = c.border)}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>📄</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</div>
+                  <div style={{ fontSize: 11, color: c.textDim }}>{m.by} · {m.time}</div>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#EF4444", background: "rgba(239,68,68,0.08)", padding: "2px 8px", borderRadius: 5 }}>{m.type}</span>
+                <Ic n="download" size={13} color={c.textDim} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Announcements */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Course Announcements</div>
+            <button onClick={() => setTab("announcements")} style={{ fontSize: 12, color: c.primary, fontWeight: 600, background: "none", border: "none", cursor: "pointer" }}>View All →</button>
+          </div>
+          {announcements.map((a, i) => (
+            <div key={i} style={{ padding: "12px 14px", background: c.surface2, borderRadius: 11, border: `1px solid ${c.border}`, marginBottom: 8, cursor: "pointer", transition: "border-color 0.16s ease" }}
+              onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = c.primary)}
+              onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = c.border)}
+            >
+              <div style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: a.priority === "high" ? "#EF4444" : "#F59E0B", marginTop: 5, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{a.title}</div>
+                  <div style={{ fontSize: 11, color: c.textDim, marginTop: 2 }}>{a.by} · {a.time}</div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Right sidebar */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+
+        {/* Next class card */}
+        <div style={{ background: `linear-gradient(135deg, ${course.color}, ${course.color}CC)`, borderRadius: 18, padding: "22px 24px", color: "#fff" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.8, marginBottom: 12, letterSpacing: "0.06em" }}>NEXT CLASS</div>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 16, marginBottom: 10 }}>{course.name}</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 18, opacity: 0.9 }}>
+            {[
+              { icon: "clock", val: "Today · 10:00 AM – 11:30 AM" },
+              { icon: "map", val: `Room ${course.room}` },
+              { icon: "user", val: course.instructor },
+            ].map((m) => (
+              <div key={m.val} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <Ic n={m.icon} size={13} color="rgba(255,255,255,0.8)" />
+                <span style={{ fontSize: 13 }}>{m.val}</span>
+              </div>
+            ))}
+          </div>
+          <button style={{ width: "100%", padding: "9px", borderRadius: 10, background: "rgba(255,255,255,0.2)", border: "1px solid rgba(255,255,255,0.3)", color: "#fff", fontFamily: "Inter", fontWeight: 600, fontSize: 13, cursor: "pointer", backdropFilter: "blur(4px)", transition: "background 0.16s ease" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.3)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.2)")}
+          >
+            View Routine →
+          </button>
+        </div>
+
+        {/* Progress widget */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 18 }}>Course Progress</div>
+          {/* Circular indicator */}
+          <div style={{ display: "flex", alignItems: "center", gap: 18, marginBottom: 20, paddingBottom: 18, borderBottom: `1px solid ${c.border}` }}>
+            <div style={{ position: "relative", width: 72, height: 72, flexShrink: 0 }}>
+              <svg viewBox="0 0 72 72" width={72} height={72}>
+                <circle cx={36} cy={36} r={28} fill="none" stroke={c.surface2} strokeWidth={7} />
+                <circle cx={36} cy={36} r={28} fill="none" stroke={course.color} strokeWidth={7}
+                  strokeDasharray={`${2 * Math.PI * 28}`}
+                  strokeDashoffset={`${2 * Math.PI * 28 * (1 - course.progress / 100)}`}
+                  strokeLinecap="round" transform="rotate(-90 36 36)"
+                  style={{ transition: "stroke-dashoffset 1s ease" }}
+                />
+              </svg>
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Manrope", fontWeight: 800, fontSize: 14, color: c.text }}>
+                {course.progress}%
+              </div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 2 }}>Overall Progress</div>
+              <div style={{ fontSize: 12, color: c.textMuted }}>Good progress — keep it up!</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+            {progress.map((p) => (
+              <div key={p.label}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                  <span style={{ fontSize: 12, color: c.textMuted }}>{p.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{p.pct}%</span>
+                </div>
+                <ProgressBar pct={p.pct} color={p.color} t={t} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick actions */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 14 }}>Quick Actions</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[
+              { label: "View All Materials", tab: "materials" as CourseTab, icon: "file" },
+              { label: "View Assignments", tab: "assignments" as CourseTab, icon: "clipboard" },
+              { label: "View Exam Schedule", tab: "exams" as CourseTab, icon: "award" },
+            ].map((a) => (
+              <button key={a.label} onClick={() => setTab(a.tab)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 11, cursor: "pointer", fontFamily: "Inter", fontSize: 13, fontWeight: 500, color: c.textMuted, transition: "all 0.16s ease", textAlign: "left" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = c.primary; (e.currentTarget as HTMLElement).style.color = c.primary; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = c.border; (e.currentTarget as HTMLElement).style.color = c.textMuted; }}
+              >
+                <Ic n={a.icon} size={14} color={c.textDim} />
+                {a.label}
+                <Ic n="arrow" size={13} color={c.textDim} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MATERIALS TAB ─────────────────────────────────────────────────────────────
+type MaterialSource = "Official Material" | "Class Note" | "Student Note";
+type ReviewStatus = "Approved" | "Pending Review" | "Rejected";
+
+type Material = {
+  title: string; cat: string; type: string; size: string;
+  by: string; date: string;
+  source: MaterialSource; uploaderType: "Teacher" | "CR" | "Student";
+  reviewStatus?: ReviewStatus; rejectReason?: string; isMine?: boolean;
+};
+
+const BASE_MATERIALS: Material[] = [
+  { title: "Lecture 05 — SQL Joins", cat: "Lectures", type: "PDF", size: "2.4 MB", by: "Dr. Rahman", date: "2 hours ago", source: "Official Material", uploaderType: "Teacher" },
+  { title: "Lecture 04 — Normalization", cat: "Lectures", type: "PDF", size: "1.8 MB", by: "Dr. Rahman", date: "Yesterday", source: "Official Material", uploaderType: "Teacher" },
+  { title: "Normalization Notes", cat: "Notes", type: "PDF", size: "1.1 MB", by: "CR", date: "Yesterday", source: "Class Note", uploaderType: "CR" },
+  { title: "Database Design Notes", cat: "Notes", type: "PDF", size: "3.1 MB", by: "Dr. Rahman", date: "3 days ago", source: "Official Material", uploaderType: "Teacher" },
+  { title: "ER Diagram Slides", cat: "Slides", type: "PPTX", size: "5.2 MB", by: "Dr. Rahman", date: "1 week ago", source: "Official Material", uploaderType: "Teacher" },
+  { title: "SQL Lab Exercise 03", cat: "Lab", type: "PDF", size: "0.8 MB", by: "Dr. Rahman", date: "1 week ago", source: "Official Material", uploaderType: "Teacher" },
+  { title: "Lecture 03 — Relational Model", cat: "Lectures", type: "PDF", size: "2.1 MB", by: "Dr. Rahman", date: "2 weeks ago", source: "Official Material", uploaderType: "Teacher" },
+  { title: "SQL Cheat Sheet", cat: "Notes", type: "PDF", size: "0.6 MB", by: "Naimur", date: "2 days ago", source: "Student Note", uploaderType: "Student", reviewStatus: "Approved", isMine: false },
+  { title: "Lab Report Template", cat: "Lab", type: "DOCX", size: "0.3 MB", by: "Dr. Rahman", date: "2 weeks ago", source: "Official Material", uploaderType: "Teacher" },
+];
+
+// ─── SOURCE BADGE ─────────────────────────────────────────────────────────────
+function SourceBadge({ source, t }: { source: MaterialSource; t: Theme }) {
+  const cfg: Record<MaterialSource, { color: string; bg: string; border: string }> = {
+    "Official Material": { color: "#2563EB", bg: "rgba(37,99,235,0.07)", border: "rgba(37,99,235,0.18)" },
+    "Class Note": { color: "#8B5CF6", bg: "rgba(139,92,246,0.07)", border: "rgba(139,92,246,0.18)" },
+    "Student Note": { color: "#10B981", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.18)" },
+  };
+  const s = cfg[source];
+  return <span style={{ fontSize: 10, fontWeight: 700, color: s.color, background: s.bg, border: `1px solid ${s.border}`, borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{source}</span>;
+}
+
+function ReviewBadge({ status, t }: { status: ReviewStatus; t: Theme }) {
+  const c = tok(t);
+  const cfg: Record<ReviewStatus, { color: string; bg: string; border: string }> = {
+    "Approved": { color: "#10B981", bg: "rgba(16,185,129,0.07)", border: "rgba(16,185,129,0.2)" },
+    "Pending Review": { color: "#F59E0B", bg: "rgba(245,158,11,0.07)", border: "rgba(245,158,11,0.2)" },
+    "Rejected": { color: "#EF4444", bg: "rgba(239,68,68,0.07)", border: "rgba(239,68,68,0.2)" },
+  };
+  const s = cfg[status];
+  return <span style={{ fontSize: 10, fontWeight: 700, color: s.color, background: s.bg, border: `1px solid ${s.border}`, borderRadius: 5, padding: "2px 7px", whiteSpace: "nowrap" }}>{status}</span>;
+}
+
+// ─── UPLOAD NOTE MODAL ────────────────────────────────────────────────────────
+type UploadState = "form" | "success";
+
+function NoteUploadModal({ t, onClose, onUploaded }: {
+  t: Theme; onClose: () => void; onUploaded: (note: Material) => void;
+}) {
+  const c = tok(t);
+  const [state, setState] = useState<UploadState>("form");
+  const [title, setTitle] = useState("");
+  const [cat, setCat] = useState("Lecture Notes");
+  const [desc, setDesc] = useState("");
+  const [file, setFile] = useState<{ name: string; size: string } | null>(null);
+  const [uploadedNote, setUploadedNote] = useState<Material | null>(null);
+
+  const inputSt: React.CSSProperties = {
+    width: "100%", padding: "9px 12px", borderRadius: 9, background: c.surface2,
+    border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13,
+    outline: "none", boxSizing: "border-box",
+  };
+  const labelSt: React.CSSProperties = {
+    display: "block", fontSize: 11, fontWeight: 700, color: c.textDim,
+    textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 5,
+  };
+
+  const simulateFile = () => setFile({ name: "Normalization_Cheat_Sheet.pdf", size: "2.4 MB" });
+
+  const doUpload = () => {
+    if (!title.trim()) return;
+    const note: Material = {
+      title: title || "Normalization Cheat Sheet",
+      cat, type: "PDF", size: file?.size ?? "—",
+      by: "You", date: "Just now",
+      source: "Student Note", uploaderType: "Student",
+      reviewStatus: "Pending Review", isMine: true,
+    };
+    setUploadedNote(note);
+    onUploaded(note);
+    setState("success");
+  };
+
+  const overlay: React.CSSProperties = {
+    position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(4px)",
+    zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+  };
+  const modal: React.CSSProperties = {
+    background: c.surface, border: `1px solid ${c.border}`, borderRadius: 20,
+    width: "100%", maxWidth: 520, maxHeight: "90vh", overflowY: "auto",
+    boxShadow: "0 24px 64px rgba(0,0,0,0.22)",
+  };
+
+  if (state === "success" && uploadedNote) return (
+    <div style={overlay} onClick={onClose}>
+      <div style={{ ...modal, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: "36px 32px", textAlign: "center" }}>
+          <div style={{ width: 52, height: 52, borderRadius: "50%", background: "rgba(16,185,129,0.1)", border: "2px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <Ic n="check" size={22} color="#10B981" />
+          </div>
+          <h2 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 6 }}>Note Uploaded Successfully</h2>
+          <div style={{ fontSize: 14, fontWeight: 600, color: c.text, marginBottom: 4 }}>{uploadedNote.title}</div>
+          <p style={{ fontSize: 13, color: c.textMuted, marginBottom: 20, lineHeight: 1.6 }}>Your note has been submitted for review.</p>
+          <div style={{ display: "inline-flex", gap: 8, alignItems: "center", padding: "8px 16px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)", borderRadius: 9, marginBottom: 24 }}>
+            <span style={{ fontSize: 11, color: c.textDim }}>Status:</span>
+            <ReviewBadge status="Pending Review" t={t} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Back to Materials</button>
+            <button onClick={onClose} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>View Note</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={overlay} onClick={onClose}>
+      <div style={modal} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ padding: "20px 24px 16px", borderBottom: `1px solid ${c.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h2 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text, marginBottom: 2 }}>Upload Note</h2>
+            <p style={{ fontSize: 12, color: c.textMuted }}>Share your class notes and study materials with your classmates.</p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}><Ic n="x" size={18} color={c.textDim} /></button>
+        </div>
+
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+          {/* Course (auto-filled, read-only) */}
+          <div style={{ padding: "10px 14px", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Course</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>Database Management</div>
+              <div style={{ fontSize: 11, color: c.textDim }}>CSE 305</div>
+            </div>
+            <span style={{ fontSize: 10, fontWeight: 700, color: c.textDim, background: c.surface3, borderRadius: 4, padding: "2px 7px" }}>Auto-filled</span>
+          </div>
+
+          {/* Title */}
+          <div>
+            <label style={labelSt}>Note Title *</label>
+            <input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Normalization Cheat Sheet" style={inputSt} />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label style={labelSt}>Category</label>
+            <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...inputSt, appearance: "none", cursor: "pointer" }}>
+              {["Lecture Notes", "Study Notes", "Exam Preparation", "Cheat Sheet", "Lab Notes", "Other"].map(o => <option key={o}>{o}</option>)}
+            </select>
+          </div>
+
+          {/* Description */}
+          <div>
+            <label style={labelSt}>Description <span style={{ textTransform: "none", fontWeight: 400 }}>(optional)</span></label>
+            <textarea rows={3} value={desc} onChange={e => setDesc(e.target.value)} placeholder="Briefly describe this note..."
+              style={{ ...inputSt, resize: "vertical" }} />
+          </div>
+
+          {/* File upload */}
+          <div>
+            <label style={labelSt}>File *</label>
+            {file ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 10 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 8, background: "rgba(239,68,68,0.08)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <Ic n="file" size={15} color="#EF4444" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{file.name}</div>
+                  <div style={{ fontSize: 11, color: c.textDim }}>{file.size}</div>
+                </div>
+                <button onClick={() => setFile(null)} style={{ fontSize: 11, fontWeight: 600, color: "#EF4444", background: "none", border: "none", cursor: "pointer" }}>Remove</button>
+              </div>
+            ) : (
+              <div onClick={simulateFile} style={{ border: `2px dashed ${c.border}`, borderRadius: 12, padding: "28px 16px", textAlign: "center", cursor: "pointer", background: c.surface2, transition: "border-color 0.15s" }}
+                onMouseEnter={e => (e.currentTarget as HTMLElement).style.borderColor = c.primary}
+                onMouseLeave={e => (e.currentTarget as HTMLElement).style.borderColor = c.border}>
+                <Ic n="upload" size={22} color={c.textDim} />
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text, marginTop: 10, marginBottom: 4 }}>Drag and drop your file here</div>
+                <div style={{ fontSize: 12, color: c.textDim, marginBottom: 12 }}>or</div>
+                <button style={{ padding: "7px 18px", borderRadius: 8, background: c.surface3, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>Choose File</button>
+                <div style={{ fontSize: 11, color: c.textDim, marginTop: 10 }}>PDF, PPT, PPTX, DOC, DOCX, JPG, PNG · Maximum 10 MB</div>
+              </div>
+            )}
+          </div>
+
+          {/* Visibility */}
+          <div style={{ padding: "12px 14px", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Visible to</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 2 }}>My Section</div>
+            <div style={{ fontSize: 11, color: c.textDim }}>CSE · Batch 52 · Section B</div>
+          </div>
+
+          {/* Moderation note */}
+          <div style={{ padding: "10px 14px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.18)", borderRadius: 10, display: "flex", gap: 10 }}>
+            <span style={{ fontSize: 15, flexShrink: 0 }}>📋</span>
+            <div style={{ fontSize: 12, color: c.textMuted, lineHeight: 1.6 }}>
+              <span style={{ fontWeight: 700, color: c.text }}>Pending Review — </span>
+              Your note will be reviewed before being shared with other students.
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "14px 24px 20px", borderTop: `1px solid ${c.border}`, display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Cancel</button>
+          <button onClick={doUpload} disabled={!title.trim()}
+            style={{ flex: 2, padding: "10px 0", borderRadius: 10, background: title.trim() ? c.primary : c.surface3, color: title.trim() ? "#fff" : c.textDim, border: "none", fontFamily: "Inter", fontSize: 14, fontWeight: 700, cursor: title.trim() ? "pointer" : "not-allowed", transition: "background 0.15s" }}>
+            Upload Note
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MATERIALS TAB ────────────────────────────────────────────────────────────
+type MatFilter = "All" | "Official" | "Class Notes" | "Student Notes" | "My Notes";
+
+function MaterialsTab({ t }: { t: Theme }) {
+  const c = tok(t);
+  const [sourceFilter, setSourceFilter] = useState<MatFilter>("All");
+  const [query, setQuery] = useState("");
+  const [showUpload, setShowUpload] = useState(false);
+  const [materials, setMaterials] = useState<Material[]>(BASE_MATERIALS);
+
+  const fileTypeColors: Record<string, string> = { PDF: "#EF4444", PPTX: "#F59E0B", DOCX: "#2563EB", XLSX: "#10B981" };
+
+  const handleUploaded = (note: Material) => setMaterials(prev => [note, ...prev]);
+
+  const filtered = materials.filter(m => {
+    const matchQ = !query || m.title.toLowerCase().includes(query.toLowerCase());
+    const matchS =
+      sourceFilter === "All" ? true :
+        sourceFilter === "Official" ? m.source === "Official Material" :
+          sourceFilter === "Class Notes" ? m.source === "Class Note" :
+            sourceFilter === "Student Notes" ? m.source === "Student Note" :
+              m.isMine === true;
+    return matchQ && matchS;
+  });
+
+  const myNotes = materials.filter(m => m.isMine);
+  const myPending = myNotes.filter(m => m.reviewStatus === "Pending Review").length;
+  const myApproved = myNotes.filter(m => m.reviewStatus === "Approved").length;
+
+  return (
+    <div>
+      {showUpload && <NoteUploadModal t={t} onClose={() => setShowUpload(false)} onUploaded={handleUploaded} />}
+
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
+          <div style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }}><Ic n="search" size={14} color={c.textDim} /></div>
+          <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search materials..."
+            style={{ width: "100%", padding: "9px 14px 9px 38px", borderRadius: 10, background: c.surface, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+        </div>
+        <button onClick={() => setShowUpload(true)}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "9px 18px", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+          <Ic n="plus" size={14} color="#fff" /> Upload Note
+        </button>
+      </div>
+
+      {/* Source filter tabs */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        {(["All", "Official", "Class Notes", "Student Notes", "My Notes"] as MatFilter[]).map(f => (
+          <button key={f} onClick={() => setSourceFilter(f)}
+            style={{ padding: "6px 13px", borderRadius: 8, fontSize: 12, fontWeight: sourceFilter === f ? 700 : 500, background: sourceFilter === f ? `${c.primary}12` : c.surface2, border: `1px solid ${sourceFilter === f ? `${c.primary}35` : c.border}`, color: sourceFilter === f ? c.primary : c.textMuted, cursor: "pointer" }}>
+            {f}{f === "My Notes" && myNotes.length > 0 ? ` (${myNotes.length})` : ""}
+          </button>
+        ))}
+      </div>
+
+      {/* My Notes summary bar */}
+      {sourceFilter === "My Notes" && myNotes.length > 0 && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, padding: "12px 16px", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: c.text }}>{myNotes.length} upload{myNotes.length !== 1 ? "s" : ""}</span>
+          {myPending > 0 && <span style={{ fontSize: 11, color: "#F59E0B" }}>· {myPending} Pending Review</span>}
+          {myApproved > 0 && <span style={{ fontSize: 11, color: "#10B981" }}>· {myApproved} Approved</span>}
+        </div>
+      )}
+
+      {/* Materials list */}
+      <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, overflow: "hidden", boxShadow: c.cardShadow }}>
+        {/* Table header */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 130px 80px 100px 100px 120px", gap: 0, padding: "11px 20px", background: c.surface2, borderBottom: `1px solid ${c.border}` }}>
+          {["Title", "Source", "Type", "Size", "Uploaded", "Actions"].map(h => (
+            <div key={h} style={{ fontSize: 11, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em" }}>{h}</div>
+          ))}
+        </div>
+
+        {filtered.length === 0 ? (
+          <div style={{ padding: "48px", textAlign: "center" }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>{sourceFilter === "My Notes" ? "📝" : "📂"}</div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 16, color: c.text, marginBottom: 6 }}>
+              {sourceFilter === "My Notes" ? "No uploaded notes yet" : "No materials found"}
+            </div>
+            <div style={{ fontSize: 13, color: c.textMuted, marginBottom: 16 }}>
+              {sourceFilter === "My Notes" ? "Upload your first class note to share with your section." : "Try a different filter or search term."}
+            </div>
+            {sourceFilter === "My Notes" && (
+              <button onClick={() => setShowUpload(true)} style={{ padding: "9px 22px", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                + Upload Note
+              </button>
+            )}
+          </div>
+        ) : filtered.map((m, i) => (
+          <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr 130px 80px 100px 100px 120px", alignItems: "center", padding: "13px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${c.border}` : "none", transition: "background 0.14s ease", cursor: "pointer" }}
+            onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = c.surface2}
+            onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = "transparent"}
+          >
+            {/* Title + uploader */}
+            <div style={{ display: "flex", gap: 11, alignItems: "center", minWidth: 0 }}>
+              <div style={{ width: 34, height: 34, borderRadius: 9, background: `${fileTypeColors[m.type] ?? "#64748B"}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <Ic n="file" size={15} color={fileTypeColors[m.type] ?? c.textDim} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.title}</div>
+                <div style={{ fontSize: 11, color: m.uploaderType === "CR" ? "#8B5CF6" : c.textDim }}>
+                  Uploaded by {m.by}
+                  {m.reviewStatus && (
+                    <span style={{ marginLeft: 6 }}><ReviewBadge status={m.reviewStatus} t={t} /></span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Source badge */}
+            <div><SourceBadge source={m.source} t={t} /></div>
+
+            {/* File type */}
+            <span style={{ padding: "2px 8px", borderRadius: 5, fontSize: 10, fontWeight: 700, background: `${fileTypeColors[m.type] ?? "#64748B"}12`, color: fileTypeColors[m.type] ?? c.textDim }}>{m.type}</span>
+
+            <span style={{ fontSize: 12, color: c.textDim }}>{m.size}</span>
+            <span style={{ fontSize: 12, color: c.textDim }}>{m.date}</span>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 5 }}>
+              {m.isMine && m.reviewStatus === "Pending Review" ? (
+                <>
+                  {[{ icon: "eye", label: "Preview" }, { icon: "edit", label: "Edit" }, { icon: "trash", label: "Delete" }].map(a => (
+                    <button key={a.label} title={a.label}
+                      style={{ width: 28, height: 28, borderRadius: 8, background: "none", border: `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.14s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = c.primary; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = c.border; }}>
+                      <Ic n={a.icon} size={12} color={c.textDim} />
+                    </button>
+                  ))}
+                </>
+              ) : m.reviewStatus === "Rejected" ? (
+                <button style={{ padding: "4px 9px", borderRadius: 7, background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.18)", color: "#EF4444", fontFamily: "Inter", fontSize: 10, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  New Version
+                </button>
+              ) : (
+                <>
+                  {[{ icon: "eye", label: "Preview" }, { icon: "download", label: "Download" }, { icon: "bookmark", label: "Save" }].map(a => (
+                    <button key={a.label} title={a.label}
+                      style={{ width: 28, height: 28, borderRadius: 8, background: "none", border: `1px solid ${c.border}`, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.14s" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = c.primary; (e.currentTarget as HTMLElement).style.background = c.highlight; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = c.border; (e.currentTarget as HTMLElement).style.background = "none"; }}>
+                      <Ic n={a.icon} size={12} color={c.textDim} />
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── ASSIGNMENTS TAB ───────────────────────────────────────────────────────────
+const ALL_ASSIGNMENTS = [
+  { title: "Database Assignment 02", due: "Tomorrow • 11:59 PM", status: "Upcoming", weight: "10%", desc: "Write SQL queries for complex joins and subqueries. Minimum 15 queries required.", urgency: "#EF4444" },
+  { title: "Database Assignment 01", due: "Aug 20 • 11:59 PM", status: "Submitted", weight: "10%", desc: "ER diagram and relational schema design for a library system.", urgency: "#10B981" },
+  { title: "Lab Report 02", due: "Aug 18 • 11:59 PM", status: "Completed", weight: "5%", desc: "Lab exercise on data insertion and retrieval using SQLite.", urgency: "#10B981" },
+  { title: "Quiz 02 Preparation", due: "Sep 5 • 10:00 AM", status: "Upcoming", weight: "5%", desc: "In-class quiz on normalization (1NF, 2NF, 3NF, BCNF).", urgency: "#F59E0B" },
+];
+
+function AssignmentsTab({ t }: { t: Theme }) {
+  const c = tok(t);
+  const [filter, setFilter] = useState<string>("Upcoming");
+  const statusColors: Record<string, { text: string; bg: string; border: string }> = {
+    Upcoming: { text: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)" },
+    Submitted: { text: "#3B82F6", bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.2)" },
+    Completed: { text: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)" },
+    Overdue: { text: "#EF4444", bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.2)" },
+  };
+
+  const filtered = ALL_ASSIGNMENTS.filter((a) => filter === "All" || a.status === filter);
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 22 }}>
+        {["Upcoming", "Submitted", "Completed", "Overdue"].map((f) => (
+          <GhostBtn key={f} active={filter === f} onClick={() => setFilter(f)} small>{f}</GhostBtn>
+        ))}
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {filtered.length === 0 ? (
+          <div style={{ padding: "60px", textAlign: "center", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18 }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 16, color: c.text, marginBottom: 6 }}>No {filter.toLowerCase()} assignments</div>
+            <div style={{ fontSize: 13, color: c.textMuted }}>You&apos;re all caught up.</div>
+          </div>
+        ) : filtered.map((a, i) => {
+          const st = statusColors[a.status];
+          const dueTomorrow = a.due.toLowerCase().includes("tomorrow");
+          return (
+            <div key={i} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "20px 22px", boxShadow: c.cardShadow }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div>
+                  <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 4 }}>{a.title}</h3>
+                  <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.5 }}>{a.desc}</p>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 7, alignItems: "flex-end", flexShrink: 0, marginLeft: 16 }}>
+                  <span style={{ padding: "3px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: st.bg, color: st.text, border: `1px solid ${st.border}` }}>{a.status}</span>
+                  <span style={{ fontSize: 11, color: c.textDim }}>Weight: {a.weight}</span>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 12, borderTop: `1px solid ${c.border}` }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <Ic n="clock" size={13} color={dueTomorrow ? "#EF4444" : c.textDim} />
+                  <span style={{ fontSize: 12, fontWeight: dueTomorrow ? 700 : 400, color: dueTomorrow ? "#EF4444" : c.textMuted }}>Due: {a.due}</span>
+                </div>
+                {a.status === "Upcoming" && <PrimaryBtn small>View Assignment</PrimaryBtn>}
+                {a.status === "Submitted" && <span style={{ fontSize: 12, color: "#10B981", fontWeight: 600 }}>✓ Submitted</span>}
+                {a.status === "Completed" && <span style={{ fontSize: 12, color: "#10B981", fontWeight: 600 }}>✓ Graded</span>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── EXAMS TAB ─────────────────────────────────────────────────────────────────
+function ExamsTab({ t }: { t: Theme }) {
+  const c = tok(t);
+  const exams = [
+    { title: "Quiz 02", date: "Aug 28", time: "10:00 AM", room: "Room 502", type: "Quiz", status: "Upcoming", syllabus: "ER Diagrams, Relational Model", weight: "5%" },
+    { title: "Midterm Examination", date: "September 10", time: "10:00 AM", room: "Room 502", type: "Midterm", status: "Upcoming", syllabus: "Chapters 1–6: Intro, ER, Relational Model, SQL, Normalization", weight: "25%" },
+    { title: "Quiz 03", date: "September 25", time: "10:00 AM", room: "Room 502", type: "Quiz", status: "Upcoming", syllabus: "SQL Advanced, Transactions", weight: "5%" },
+    { title: "Final Examination", date: "November 20", time: "10:00 AM", room: "Room 502", type: "Final", status: "Upcoming", syllabus: "All chapters covered during semester", weight: "40%" },
+  ];
+  const typeColors: Record<string, string> = { Quiz: "#3B82F6", Midterm: "#F59E0B", Final: "#EF4444" };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {/* Timeline */}
+      {exams.map((ex, i) => (
+        <div key={i} style={{ display: "flex", gap: 18 }}>
+          {/* Timeline dot */}
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+            <div style={{ width: 12, height: 12, borderRadius: "50%", background: typeColors[ex.type] ?? c.primary, marginTop: 22, flexShrink: 0 }} />
+            {i < exams.length - 1 && <div style={{ width: 1, flex: 1, background: c.border, marginTop: 4 }} />}
+          </div>
+
+          <div style={{ flex: 1, background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "18px 22px", marginBottom: 4, boxShadow: c.cardShadow }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 5 }}>
+                  <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text }}>{ex.title}</h3>
+                  <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: `${typeColors[ex.type]}15`, color: typeColors[ex.type], border: `1px solid ${typeColors[ex.type]}30` }}>{ex.type}</span>
+                </div>
+                <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+                  {[
+                    { icon: "calendar", val: ex.date },
+                    { icon: "clock", val: ex.time },
+                    { icon: "map", val: ex.room },
+                  ].map((m) => (
+                    <div key={m.val} style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                      <Ic n={m.icon} size={13} color={c.textDim} />
+                      <span style={{ fontSize: 13, color: c.textMuted }}>{m.val}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 16 }}>
+                <div style={{ fontSize: 12, color: c.textDim, marginBottom: 4 }}>Weight</div>
+                <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 16, color: typeColors[ex.type] }}>{ex.weight}</div>
+              </div>
+            </div>
+            <div style={{ background: c.surface2, borderRadius: 10, padding: "10px 14px", border: `1px solid ${c.border}` }}>
+              <span style={{ fontSize: 11, color: c.textDim, fontWeight: 600 }}>SYLLABUS: </span>
+              <span style={{ fontSize: 12, color: c.textMuted }}>{ex.syllabus}</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── ANNOUNCEMENTS TAB ─────────────────────────────────────────────────────────
+function AnnouncementsTab({ t }: { t: Theme }) {
+  const c = tok(t);
+  const [expanded, setExpanded] = useState<number | null>(null);
+  const items = [
+    { title: "Midterm syllabus updated", body: "The midterm examination syllabus has been updated to include topics from Chapter 5 (Normalization) up to 3NF. Please review the updated document in the Materials section.", by: "Dr. Rahman", time: "2 hours ago", priority: "high" },
+    { title: "Classroom changed for tomorrow", body: "Tomorrow's class (August 27) will be held in Room 301 instead of Room 502 due to maintenance. Please adjust accordingly.", by: "Dr. Rahman", time: "Yesterday", priority: "medium" },
+    { title: "Assignment 02 posted", body: "Database Assignment 02 has been posted. Due date is August 28 at 11:59 PM. Focus on complex SQL joins and subqueries.", by: "Dr. Rahman", time: "3 days ago", priority: "low" },
+    { title: "Office hours this week", body: "Office hours will be held on Monday 2–4 PM in Room 308. Bring your assignment questions.", by: "Dr. Rahman", time: "1 week ago", priority: "low" },
+  ];
+  const priorityColor: Record<string, string> = { high: "#EF4444", medium: "#F59E0B", low: "#94A3B8" };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {items.map((a, i) => (
+        <div key={i} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, overflow: "hidden", boxShadow: c.cardShadow }}>
+          <div style={{ padding: "18px 22px", cursor: "pointer", display: "flex", gap: 12, alignItems: "flex-start" }}
+            onClick={() => setExpanded(expanded === i ? null : i)}
+          >
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: priorityColor[a.priority], marginTop: 6, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 4 }}>{a.title}</h3>
+                <div style={{ display: "flex", gap: 10, alignItems: "center", flexShrink: 0, marginLeft: 12 }}>
+                  {a.priority === "high" && <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: "rgba(239,68,68,0.08)", color: "#EF4444", border: "1px solid rgba(239,68,68,0.2)" }}>Important</span>}
+                  <span style={{ fontSize: 11, color: c.textDim }}>{a.time}</span>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: c.textMuted }}>{a.by}</div>
+            </div>
+          </div>
+          {expanded === i && (
+            <div style={{ padding: "0 22px 18px 42px", borderTop: `1px solid ${c.border}` }}>
+              <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65, paddingTop: 14 }}>{a.body}</p>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export default function CoursesPage() {
+  const [activeCourse, setActiveCourse] = useState<Course | null>(null);
+
+  if (activeCourse) {
+    return <CourseDetail course={activeCourse} onBack={() => setActiveCourse(null)} />;
+  }
+
+  return <MyCourses onOpenCourse={(c) => setActiveCourse(c)} />;
+}
+

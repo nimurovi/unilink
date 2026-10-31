@@ -1,0 +1,11 @@
+{
+  "title": "UNILINK",
+  "description": "Streamline your design process with an intuitive platform that allows users to create, collaborate, and share stunning visuals effortlessly.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

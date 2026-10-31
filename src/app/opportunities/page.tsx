@@ -1,0 +1,1105 @@
+"use client";
+import { useState, useEffect, useContext } from "react";
+import { ThemeCtx } from "@/components/ui/Theme";
+
+type Theme = "light" | "dark";
+const useTheme = () => useContext(ThemeCtx);
+
+const LIGHT = {
+  bg: "#F8FAFC", surface: "#FFFFFF", surface2: "#F1F5F9", surface3: "#E2E8F0",
+  primary: "#2563EB", text: "#0F172A", textMuted: "#64748B", textDim: "#94A3B8",
+  border: "#E2E8F0", cardShadow: "0 1px 3px rgba(15,23,42,0.06), 0 4px 12px rgba(15,23,42,0.04)",
+};
+const DARK = {
+  bg: "#080D1A", surface: "#0F172A", surface2: "#172033", surface3: "#1E293B",
+  primary: "#3B82F6", text: "#F8FAFC", textMuted: "#94A3B8", textDim: "#475569",
+  border: "#1E293B", cardShadow: "0 1px 4px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.18)",
+};
+const tok = (t: Theme) => t === "light" ? LIGHT : DARK;
+
+const P: Record<string, string[]> = {
+  search:   ["M21 21l-4.35-4.35M17 11a6 6 0 1 1-12 0 6 6 0 0 1 12 0z"],
+  arrowL:   ["M19 12H5M12 19l-7-7 7-7"],
+  chevR:    ["M9 18l6-6-6-6"],
+  bookmark: ["M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"],
+  check:    ["M20 6L9 17l-5-5"],
+  x:        ["M18 6L6 18M6 6l12 12"],
+  clock:    ["M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z","M12 6v6l4 2"],
+  map:      ["M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z","M12 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"],
+  briefcase:["M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16","M2 7h20v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7z"],
+  users:    ["M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2","M23 21v-2a4 4 0 0 0-3-3.87","M16 3.13a4 4 0 0 1 0 7.75","M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"],
+  share:    ["M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8","M16 6l-4-4-4 4","M12 2v13"],
+  alert:    ["M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z","M12 9v4M12 17h.01"],
+  star:     ["M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"],
+  zap:      ["M13 2L3 14h9l-1 8 10-12h-9l1-8z"],
+  upload:   ["M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4","M17 8l-5-5-5 5","M12 3v12"],
+  link:     ["M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71","M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"],
+  award:    ["M12 15a7 7 0 1 0 0-14 7 7 0 0 0 0 14z","M8.21 13.89L7 23l5-3 5 3-1.21-9.12"],
+  shield:   ["M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"],
+};
+function Ic({ n, size = 16, color = "currentColor" }: { n: string; size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round">
+      {(P[n] ?? []).map((d, i) => <path key={i} d={d} />)}
+    </svg>
+  );
+}
+
+// ─── TYPES ──────────────────────────────────────────────────────────────────────
+type OppType = "Internship" | "Scholarship" | "Competition" | "Hackathon" | "Research" | "Fellowship" | "Job" | "Volunteer" | "Training" | "Workshop" | "Certification" | "Grant";
+type OppStatus = "open" | "closing-soon" | "closed";
+type AppStatus = "draft" | "submitted" | "under-review" | "shortlisted" | "interview" | "accepted" | "rejected" | "withdrawn";
+
+type Opportunity = {
+  id: string; title: string; type: OppType; organization: string; orgType: "company" | "university" | "ngo" | "government";
+  location: string; remote: boolean; duration?: string; startDate?: string;
+  deadline: string; deadlineShort: string; daysLeft: number; status: OppStatus;
+  eligibility: string; department: string; batch?: string; cgpa?: string; paid?: boolean;
+  description: string; color: string; emoji: string; featured?: boolean; verified?: boolean;
+  responsibilities?: string[]; requirements?: string[]; benefits?: string[];
+  applicationProcess?: string[];
+  matchPct?: number; savedAgo?: string;
+};
+
+type Application = {
+  id: string; oppId: string; status: AppStatus; appliedDate: string;
+  timeline: { label: string; date: string; done: boolean }[];
+};
+
+const TYPE_CFG: Record<OppType, { color: string; bg: string }> = {
+  Internship:   { color: "#2563EB", bg: "rgba(37,99,235,0.08)"  },
+  Scholarship:  { color: "#F59E0B", bg: "rgba(245,158,11,0.08)" },
+  Competition:  { color: "#EF4444", bg: "rgba(239,68,68,0.08)"  },
+  Hackathon:    { color: "#EF4444", bg: "rgba(239,68,68,0.08)"  },
+  Research:     { color: "#8B5CF6", bg: "rgba(139,92,246,0.08)" },
+  Fellowship:   { color: "#7C3AED", bg: "rgba(124,58,237,0.08)" },
+  Job:          { color: "#10B981", bg: "rgba(16,185,129,0.08)" },
+  Volunteer:    { color: "#10B981", bg: "rgba(16,185,129,0.08)" },
+  Training:     { color: "#06B6D4", bg: "rgba(6,182,212,0.08)"  },
+  Workshop:     { color: "#10B981", bg: "rgba(16,185,129,0.08)" },
+  Certification:{ color: "#F59E0B", bg: "rgba(245,158,11,0.08)" },
+  Grant:        { color: "#7C3AED", bg: "rgba(124,58,237,0.08)" },
+};
+
+const OPPS: Opportunity[] = [
+  {
+    id: "o1", title: "Software Engineering Internship", type: "Internship", organization: "ABC Technologies", orgType: "company",
+    location: "Dhaka / Remote", remote: true, duration: "3 Months", startDate: "January 2027",
+    deadline: "October 15, 2026", deadlineShort: "Oct 15", daysLeft: 47, status: "open",
+    eligibility: "Undergraduate Students", department: "CSE / SWE / EEE", batch: "50–54", cgpa: "3.00", paid: true,
+    description: "We are looking for motivated undergraduate students interested in software engineering to join our summer internship program. You will work alongside experienced engineers on real-world product features.",
+    color: "#2563EB", emoji: "💻", featured: true, verified: true, matchPct: 98,
+    responsibilities: ["Work with software engineering teams","Develop and test software features","Participate in code reviews","Collaborate with other interns","Attend technical sessions"],
+    requirements: ["Undergraduate student in CSE/SWE/EEE","Programming fundamentals","Knowledge of at least one language","Basic data structures and algorithms","Good communication skills"],
+    benefits: ["Monthly stipend","Certificate of completion","Mentorship from senior engineers","Flexible working environment","Potential full-time offer"],
+    applicationProcess: ["Submit Application","Resume Screening","Technical Assessment","Interview","Final Selection"],
+  },
+  {
+    id: "o2", title: "Merit Scholarship 2026", type: "Scholarship", organization: "University Foundation", orgType: "university",
+    location: "On-site", remote: false, deadline: "October 5, 2026", deadlineShort: "Oct 5", daysLeft: 37, status: "open",
+    eligibility: "Undergraduate Students", department: "All Departments", batch: "50–54", cgpa: "3.50", paid: true,
+    description: "The Merit Scholarship recognizes academic excellence and provides financial support to outstanding undergraduate students. Awarded annually based on academic performance and extracurricular achievements.",
+    color: "#F59E0B", emoji: "🏅", verified: true, matchPct: 92, savedAgo: "Yesterday",
+    requirements: ["Minimum CGPA 3.50","Active university student","Batch 50–54","No active disciplinary action"],
+    benefits: ["Full semester tuition waiver","Monthly allowance","Certificate of merit","Priority for future opportunities"],
+    applicationProcess: ["Submit Application","Document Verification","Selection Committee Review","Results Announcement"],
+  },
+  {
+    id: "o3", title: "National Programming Contest", type: "Competition", organization: "National Programming Association", orgType: "government",
+    location: "Online", remote: true, deadline: "September 20, 2026", deadlineShort: "Sep 20", daysLeft: 6, status: "closing-soon",
+    eligibility: "University Students", department: "CSE / SWE / EEE", batch: "All Batches",
+    description: "An annual national-level programming competition testing algorithmic thinking, problem-solving, and coding efficiency. Top performers qualify for international rounds.",
+    color: "#EF4444", emoji: "🏆", matchPct: 96,
+    requirements: ["Currently enrolled university student","Strong algorithmic skills","Team of 1–3 members"],
+    benefits: ["Cash prizes up to BDT 1,00,000","Certificates","Qualification for international rounds","Industry recognition"],
+    applicationProcess: ["Team Registration","Preliminary Round","National Final"],
+  },
+  {
+    id: "o4", title: "University Research Fellowship", type: "Fellowship", organization: "University Research Center", orgType: "university",
+    location: "On-site", remote: false, duration: "6 Months", startDate: "October 2026",
+    deadline: "September 30, 2026", deadlineShort: "Sep 30", daysLeft: 16, status: "closing-soon",
+    eligibility: "Undergraduate Students", department: "CSE / EEE / Physics", cgpa: "3.25", paid: true,
+    description: "A structured research fellowship giving undergraduate students the opportunity to work on active university research projects under faculty supervision.",
+    color: "#8B5CF6", emoji: "🔬", verified: true, matchPct: 88, savedAgo: "3 days ago",
+    responsibilities: ["Assist faculty researchers","Conduct literature reviews","Collect and analyze data","Co-author research papers","Present findings"],
+    requirements: ["Minimum CGPA 3.25","Strong academic record","Interest in research","Faculty recommendation letter"],
+    benefits: ["Monthly research stipend","Co-authorship opportunities","Certificate","Priority for graduate programs"],
+    applicationProcess: ["Submit Application","Faculty Interview","Research Assignment","Final Selection"],
+  },
+  {
+    id: "o5", title: "AI & Machine Learning Workshop", type: "Workshop", organization: "Google Developer Groups", orgType: "company",
+    location: "Dhaka", remote: false, duration: "2 Days", startDate: "October 10, 2026",
+    deadline: "October 3, 2026", deadlineShort: "Oct 3", daysLeft: 35, status: "open",
+    eligibility: "University Students", department: "CSE / SWE", paid: false,
+    description: "An intensive hands-on workshop covering machine learning fundamentals, neural networks, and practical AI applications using Python and TensorFlow.",
+    color: "#06B6D4", emoji: "🤖", matchPct: 94,
+    requirements: ["Basic Python knowledge","Laptop required","University student"],
+    benefits: ["Free attendance","Certificate","Workshop materials","Networking with industry professionals"],
+    applicationProcess: ["Registration","Confirmation Email","Attend Workshop"],
+  },
+  {
+    id: "o6", title: "UniHack 2026 – Student Hackathon", type: "Hackathon", organization: "CSE Programming Club", orgType: "university",
+    location: "University Innovation Center", remote: false, duration: "36 Hours",
+    deadline: "September 15, 2026", deadlineShort: "Sep 15", daysLeft: 1, status: "closing-soon",
+    eligibility: "CSE Students / Batch 50–54", department: "CSE", batch: "50–54",
+    description: "A 36-hour university hackathon where teams build innovative solutions. Open to all undergraduate CSE students.",
+    color: "#EF4444", emoji: "⚡", matchPct: 99,
+    requirements: ["CSE Student","Team of 2–4","Batch 50–54"],
+    benefits: ["Cash prizes","Certificates","Industry networking","Innovation lab access"],
+    applicationProcess: ["Team Registration","Idea Submission","Hackathon Day"],
+  },
+  {
+    id: "o7", title: "Campus Volunteer Program", type: "Volunteer", organization: "University Social Wing", orgType: "university",
+    location: "On-campus", remote: false, duration: "Ongoing",
+    deadline: "October 20, 2026", deadlineShort: "Oct 20", daysLeft: 52, status: "open",
+    eligibility: "All Students", department: "All Departments",
+    description: "Join a community of student volunteers contributing to campus betterment, social programs, and outreach activities.",
+    color: "#10B981", emoji: "🤝",
+    requirements: ["Any university student","Commitment of 4 hours/week"],
+    benefits: ["Service certificate","Community recognition","Skill development"],
+    applicationProcess: ["Application","Orientation","Assignment to Team"],
+  },
+  {
+    id: "o8", title: "Data Science Certification Program", type: "Certification", organization: "Coursera × University", orgType: "university",
+    location: "Online", remote: true, duration: "3 Months",
+    deadline: "October 10, 2026", deadlineShort: "Oct 10", daysLeft: 42, status: "open",
+    eligibility: "Undergraduate Students", department: "CSE / SWE", paid: false,
+    description: "A fully subsidized data science certification track covering statistics, Python, machine learning, and data visualization. Certificates recognized by industry partners.",
+    color: "#7C3AED", emoji: "📊", matchPct: 91,
+    requirements: ["CSE or SWE student","Basic math knowledge","Stable internet access"],
+    benefits: ["Verified certificate","Coursera access","University transcript credit"],
+    applicationProcess: ["Registration","Enrollment Confirmation","Complete All Modules","Assessment"],
+  },
+];
+
+const APPLICATIONS: Application[] = [
+  {
+    id: "a1", oppId: "o1", status: "under-review", appliedDate: "Aug 25, 2026",
+    timeline: [
+      { label: "Application Submitted", date: "Aug 25", done: true },
+      { label: "Application Reviewed",  date: "Aug 27", done: true },
+      { label: "Technical Assessment",  date: "Sep 5",  done: false },
+      { label: "Interview",             date: "TBD",    done: false },
+      { label: "Final Decision",        date: "TBD",    done: false },
+    ],
+  },
+  {
+    id: "a2", oppId: "o4", status: "shortlisted", appliedDate: "Aug 20, 2026",
+    timeline: [
+      { label: "Application Submitted", date: "Aug 20", done: true },
+      { label: "Application Reviewed",  date: "Aug 22", done: true },
+      { label: "Shortlisted",           date: "Aug 28", done: true },
+      { label: "Faculty Interview",     date: "Sep 2",  done: false },
+      { label: "Final Selection",       date: "TBD",    done: false },
+    ],
+  },
+  {
+    id: "a3", oppId: "o3", status: "accepted", appliedDate: "Aug 18, 2026",
+    timeline: [
+      { label: "Registration",    date: "Aug 18", done: true },
+      { label: "Confirmation",    date: "Aug 19", done: true },
+      { label: "Accepted",        date: "Aug 21", done: true },
+    ],
+  },
+];
+
+const APP_STATUS_CFG: Record<AppStatus, { label: string; color: string; bg: string; border: string }> = {
+  draft:        { label: "Draft",         color: "#94A3B8", bg: "rgba(148,163,184,0.08)", border: "rgba(148,163,184,0.2)" },
+  submitted:    { label: "Submitted",     color: "#2563EB", bg: "rgba(37,99,235,0.08)",  border: "rgba(37,99,235,0.2)"   },
+  "under-review":{ label: "Under Review",color: "#F59E0B", bg: "rgba(245,158,11,0.08)", border: "rgba(245,158,11,0.2)"  },
+  shortlisted:  { label: "Shortlisted",  color: "#8B5CF6", bg: "rgba(139,92,246,0.08)", border: "rgba(139,92,246,0.2)"  },
+  interview:    { label: "Interview",    color: "#06B6D4", bg: "rgba(6,182,212,0.08)",  border: "rgba(6,182,212,0.2)"   },
+  accepted:     { label: "Accepted",     color: "#10B981", bg: "rgba(16,185,129,0.08)", border: "rgba(16,185,129,0.2)"  },
+  rejected:     { label: "Not Selected", color: "#94A3B8", bg: "rgba(148,163,184,0.08)",border: "rgba(148,163,184,0.2)" },
+  withdrawn:    { label: "Withdrawn",    color: "#94A3B8", bg: "rgba(148,163,184,0.06)",border: "rgba(148,163,184,0.2)" },
+};
+
+const DEADLINE_CFG = (days: number): { label: string; color: string; bg: string } => {
+  if (days <= 0) return  { label: "Closed",          color: "#94A3B8", bg: "rgba(148,163,184,0.08)" };
+  if (days === 1) return { label: "Deadline Tomorrow",color: "#EF4444", bg: "rgba(239,68,68,0.08)"  };
+  if (days <= 3)  return { label: `${days} Days Left`,color: "#EF4444", bg: "rgba(239,68,68,0.08)"  };
+  if (days <= 7)  return { label: `${days} Days Left`,color: "#F59E0B", bg: "rgba(245,158,11,0.08)" };
+  if (days <= 14) return { label: `${days} Days Left`,color: "#F59E0B", bg: "rgba(245,158,11,0.06)" };
+  return                  { label: `${days} Days Left`,color: "#10B981", bg: "rgba(16,185,129,0.06)" };
+};
+
+// ─── OVERLAY ─────────────────────────────────────────────────────────────────────
+function Overlay({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 300 }} onClick={onClose}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(5px)" }} />
+      <div onClick={e => e.stopPropagation()} style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// ─── APPLICATION MODAL ──────────────────────────────────────────────────────────
+type AppStep = "form" | "success";
+function ApplicationModal({ opp, onClose, onSubmit }: { opp: Opportunity; onClose: () => void; onSubmit: () => void }) {
+  const { theme } = useTheme(); const c = tok(theme);
+  const [step, setStep] = useState<AppStep>("form");
+  const [resumeName] = useState("Ovi_Resume_2026.pdf");
+
+  const box: React.CSSProperties = {
+    background: c.surface, border: `1px solid ${c.border}`, borderRadius: 20,
+    padding: "28px 32px", minWidth: 460, maxWidth: 500,
+    boxShadow: "0 24px 80px rgba(0,0,0,0.25)", maxHeight: "90vh", overflowY: "auto",
+  };
+
+  if (step === "success") {
+    return (
+      <Overlay onClose={onClose}>
+        <div style={{ ...box, textAlign: "center" }}>
+          <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 18px" }}>
+            <Ic n="check" size={26} color="#10B981" />
+          </div>
+          <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 20, color: c.text, marginBottom: 8 }}>Application Submitted!</div>
+          <div style={{ fontSize: 13, color: c.textMuted, marginBottom: 22, lineHeight: 1.6 }}>Your application has been submitted successfully.</div>
+          <div style={{ background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 12, padding: "14px 18px", marginBottom: 22, textAlign: "left" }}>
+            {[
+              { label: "Opportunity",  val: opp.title },
+              { label: "Organization", val: opp.organization },
+              { label: "Status",       val: "Application Submitted" },
+            ].map(r => (
+              <div key={r.label} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, gap: 12 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: c.textDim }}>{r.label}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: r.label === "Status" ? "#2563EB" : c.text, textAlign: "right" }}>{r.val}</span>
+              </div>
+            ))}
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={onClose} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>View Application</button>
+            <button onClick={() => { onSubmit(); onClose(); }} style={{ flex: 1, padding: "10px 0", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Back to Opportunities</button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay onClose={onClose}>
+      <div style={box}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Apply Now</div>
+            <div style={{ fontSize: 12, color: c.textDim, marginTop: 2 }}>{opp.title} · {opp.organization}</div>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer" }}><Ic n="x" size={18} color={c.textDim} /></button>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 18 }}>
+          {[
+            { label: "Full Name",      placeholder: "Ovi",                       type: "text"  },
+            { label: "Student Email",  placeholder: "ovi@university.edu",        type: "email" },
+            { label: "Phone",          placeholder: "+880 1XXX-XXXXXX",          type: "tel"   },
+            { label: "Department",     placeholder: "CSE",                       type: "text"  },
+            { label: "Batch",          placeholder: "52",                        type: "text"  },
+          ].map(f => (
+            <div key={f.label}>
+              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: c.textDim, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</label>
+              <input type={f.type} placeholder={f.placeholder}
+                style={{ width: "100%", padding: "9px 12px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+            </div>
+          ))}
+          {/* Resume */}
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: c.textDim, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Resume</label>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", padding: "10px 12px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}` }}>
+              <Ic n="upload" size={14} color={c.textDim} />
+              <span style={{ fontSize: 13, color: c.textMuted, flex: 1 }}>{resumeName}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#10B981" }}>Ready</span>
+            </div>
+          </div>
+          {/* Cover Letter */}
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: c.textDim, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Cover Letter <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+            <textarea rows={3} placeholder="Tell us why you're a great fit for this opportunity..."
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+          </div>
+          {/* Portfolio/LinkedIn */}
+          <div>
+            <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: c.textDim, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.06em" }}>Portfolio / GitHub / LinkedIn <span style={{ fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+            <input type="url" placeholder="https://github.com/username"
+              style={{ width: "100%", padding: "9px 12px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+          </div>
+        </div>
+        <button onClick={() => setStep("success")} style={{ width: "100%", padding: "11px 0", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+          Submit Application
+        </button>
+      </div>
+    </Overlay>
+  );
+}
+
+// ─── TOAST ────────────────────────────────────────────────────────────────────────
+function Toast({ msg, onDismiss }: { msg: string; onDismiss: () => void }) {
+  useEffect(() => { const t = setTimeout(onDismiss, 3000); return () => clearTimeout(t); }, [onDismiss]);
+  return (
+    <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: "#1E293B", color: "#F8FAFC", borderRadius: 12, padding: "11px 20px", display: "flex", gap: 10, alignItems: "center", boxShadow: "0 8px 24px rgba(0,0,0,0.3)", fontFamily: "Inter", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap" }}>
+      <Ic n="check" size={13} color="#10B981" /> {msg}
+      <button onClick={onDismiss} style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginLeft: 4 }}><Ic n="x" size={13} color="#94A3B8" /></button>
+    </div>
+  );
+}
+
+// ─── ATOMS ────────────────────────────────────────────────────────────────────────
+function TypeBadge({ type }: { type: OppType }) {
+  const cfg = TYPE_CFG[type] ?? { color: "#64748B", bg: "rgba(100,116,139,0.08)" };
+  return <span style={{ padding: "2px 8px", borderRadius: 6, fontSize: 10, fontWeight: 700, color: cfg.color, background: cfg.bg }}>{type}</span>;
+}
+function DeadlineChip({ days }: { days: number }) {
+  const d = DEADLINE_CFG(days);
+  return <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: d.color, background: d.bg, whiteSpace: "nowrap" }}>{d.label}</span>;
+}
+function AppStatusPill({ status }: { status: AppStatus }) {
+  const s = APP_STATUS_CFG[status];
+  return <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: s.color, background: s.bg, border: `1px solid ${s.border}`, whiteSpace: "nowrap" }}>{s.label}</span>;
+}
+function StatCard({ label, value, color, bg, icon }: { label: string; value: string | number; color: string; bg: string; icon: string }) {
+  const { theme } = useTheme(); const c = tok(theme);
+  return (
+    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 14 }}>
+      <div style={{ width: 42, height: 42, borderRadius: 12, background: bg, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+        <Ic n={icon} size={19} color={color} />
+      </div>
+      <div>
+        <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color, lineHeight: 1 }}>{value}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: c.text, marginTop: 3 }}>{label}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── OPPORTUNITY CARD ─────────────────────────────────────────────────────────────
+function OppCard({ opp, saved, applied, onSave, onOpen }: {
+  opp: Opportunity; saved: boolean; applied: boolean; onSave: () => void; onOpen: () => void;
+}) {
+  const { theme } = useTheme(); const c = tok(theme);
+  const [hov, setHov] = useState(false);
+
+  return (
+    <div onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ background: c.surface, border: `1px solid ${hov ? opp.color + "45" : c.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: hov ? `0 6px 24px ${opp.color}10, ${c.cardShadow}` : c.cardShadow, transition: "all 0.15s", display: "flex", flexDirection: "column" }}>
+      <div style={{ height: 3, borderRadius: 2, background: opp.color, marginBottom: 14, width: 36 }} />
+
+      <div style={{ display: "flex", gap: 12, alignItems: "flex-start", marginBottom: 10 }}>
+        <div style={{ width: 42, height: 42, borderRadius: 12, background: `${opp.color}10`, border: `1px solid ${opp.color}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{opp.emoji}</div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", gap: 5, marginBottom: 4, flexWrap: "wrap", alignItems: "center" }}>
+            <TypeBadge type={opp.type} />
+            {opp.verified && <Ic n="shield" size={11} color="#2563EB" />}
+          </div>
+          <div onClick={onOpen} style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 14, color: c.text, cursor: "pointer", lineHeight: 1.3, marginBottom: 2 }}>{opp.title}</div>
+          <div style={{ fontSize: 11, color: c.textDim }}>{opp.organization}</div>
+        </div>
+        <button onClick={e => { e.stopPropagation(); onSave(); }} style={{ padding: "5px", borderRadius: 7, background: saved ? "rgba(37,99,235,0.08)" : "transparent", border: `1px solid ${saved ? "rgba(37,99,235,0.2)" : "transparent"}`, cursor: "pointer", flexShrink: 0 }}>
+          <Ic n="bookmark" size={13} color={saved ? "#2563EB" : c.textDim} />
+        </button>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <Ic n="map" size={11} color={c.textDim} /><span style={{ fontSize: 11, color: c.textDim }}>{opp.location}</span>
+          {opp.remote && <span style={{ padding: "1px 6px", borderRadius: 4, fontSize: 9, fontWeight: 700, color: "#10B981", background: "rgba(16,185,129,0.08)" }}>Remote</span>}
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <Ic n="users" size={11} color={c.textDim} /><span style={{ fontSize: 11, color: c.textDim }}>{opp.eligibility}</span>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <Ic n="clock" size={11} color={c.textDim} /><span style={{ fontSize: 11, color: c.textDim }}>Deadline: {opp.deadlineShort}</span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+        <DeadlineChip days={opp.daysLeft} />
+        {opp.paid !== undefined && <span style={{ fontSize: 10, fontWeight: 700, color: opp.paid ? "#10B981" : "#64748B", background: opp.paid ? "rgba(16,185,129,0.06)" : "rgba(100,116,139,0.06)", borderRadius: 4, padding: "1px 6px" }}>{opp.paid ? "Paid" : "Unpaid"}</span>}
+        {applied && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", borderRadius: 4, padding: "1px 6px" }}>Applied</span>}
+      </div>
+
+      <button onClick={onOpen} style={{ width: "100%", padding: "8px 0", borderRadius: 9, background: opp.daysLeft <= 0 ? c.surface2 : opp.color, color: opp.daysLeft <= 0 ? c.textDim : "#fff", border: "none", fontFamily: "Inter", fontSize: 12, fontWeight: 700, cursor: opp.daysLeft <= 0 ? "default" : "pointer", marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+        {opp.daysLeft <= 0 ? "Closed" : "View Opportunity"} {opp.daysLeft > 0 && <Ic n="chevR" size={11} color="#fff" />}
+      </button>
+    </div>
+  );
+}
+
+// ─── FEATURED BANNER ──────────────────────────────────────────────────────────────
+function FeaturedBanner({ opp, saved, onSave, onOpen }: { opp: Opportunity; saved: boolean; onSave: () => void; onOpen: () => void }) {
+  const { theme } = useTheme(); const c = tok(theme);
+  return (
+    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 20, padding: "24px 28px", boxShadow: c.cardShadow, display: "flex", justifyContent: "space-between", alignItems: "center", gap: 24, flexWrap: "wrap", marginBottom: 24, position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: opp.color }} />
+      <div style={{ display: "flex", gap: 18, alignItems: "center" }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: `${opp.color}10`, border: `1px solid ${opp.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>{opp.emoji}</div>
+        <div>
+          <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 5, flexWrap: "wrap" }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: opp.color, textTransform: "uppercase", letterSpacing: "0.1em" }}>Featured</span>
+            <TypeBadge type={opp.type} />
+            {opp.verified && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)", borderRadius: 999, padding: "1px 7px", display: "flex", alignItems: "center", gap: 3 }}><Ic n="shield" size={9} color="#2563EB" /> Verified</span>}
+          </div>
+          <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 3 }}>{opp.title}</div>
+          <div style={{ fontSize: 13, color: c.textMuted }}>{opp.organization} · {opp.location} {opp.remote && "· Remote"}</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap", flexShrink: 0 }}>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Deadline</div>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>{opp.deadline}</div>
+          <DeadlineChip days={opp.daysLeft} />
+        </div>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Eligibility</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{opp.eligibility}</div>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button onClick={onOpen} style={{ padding: "9px 22px", borderRadius: 10, background: opp.color, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>View Opportunity</button>
+          <button onClick={onSave} style={{ padding: "9px 12px", borderRadius: 10, background: saved ? "rgba(37,99,235,0.08)" : c.surface2, border: `1px solid ${saved ? "rgba(37,99,235,0.25)" : c.border}`, cursor: "pointer" }}>
+            <Ic n="bookmark" size={16} color={saved ? "#2563EB" : c.textDim} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── OPPORTUNITY DETAIL ───────────────────────────────────────────────────────────
+function OppDetail({ opp, saved, applied, onSave, onApply, onBack }: {
+  opp: Opportunity; saved: boolean; applied: boolean;
+  onSave: () => void; onApply: () => void; onBack: () => void;
+}) {
+  const { theme } = useTheme(); const c = tok(theme);
+  const [showApply, setShowApply] = useState(false);
+  const related = OPPS.filter(o => o.id !== opp.id && (o.type === opp.type || o.department === opp.department)).slice(0, 3);
+
+  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "20px 22px", boxShadow: c.cardShadow }}>
+      <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 14 }}>{title}</div>
+      {children}
+    </div>
+  );
+
+  const BulletList = ({ items }: { items: string[] }) => (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      {items.map((item, i) => (
+        <div key={i} style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          <div style={{ width: 6, height: 6, borderRadius: "50%", background: opp.color, flexShrink: 0, marginTop: 6 }} />
+          <span style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.6 }}>{item}</span>
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 100px", background: c.bg }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto" }}>
+        <button onClick={onBack} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: c.textMuted, cursor: "pointer", fontFamily: "Inter", fontSize: 12, fontWeight: 600, marginBottom: 20, padding: 0 }}>
+          <Ic n="arrowL" size={14} color={c.textMuted} /> Back to Opportunities
+        </button>
+
+        {/* Header */}
+        <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 20, padding: "24px 28px", boxShadow: c.cardShadow, marginBottom: 20, position: "relative", overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: opp.color }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <div style={{ width: 58, height: 58, borderRadius: 16, background: `${opp.color}10`, border: `1px solid ${opp.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, flexShrink: 0 }}>{opp.emoji}</div>
+              <div>
+                <div style={{ display: "flex", gap: 7, marginBottom: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  <TypeBadge type={opp.type} />
+                  {opp.verified && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", borderRadius: 999, padding: "1px 7px", display: "flex", alignItems: "center", gap: 3 }}><Ic n="shield" size={9} color="#2563EB" /> Verified</span>}
+                </div>
+                <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 22, color: c.text, letterSpacing: "-0.01em", marginBottom: 4 }}>{opp.title}</h1>
+                <div style={{ fontSize: 13, color: c.textMuted }}>{opp.organization}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {!applied && opp.daysLeft > 0 && (
+                <button onClick={() => setShowApply(true)} style={{ padding: "9px 22px", borderRadius: 10, background: opp.color, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Apply Now</button>
+              )}
+              {applied && (
+                <div style={{ padding: "9px 16px", borderRadius: 10, background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.2)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <Ic n="check" size={14} color="#10B981" />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#10B981" }}>Applied</span>
+                </div>
+              )}
+              {opp.daysLeft <= 0 && <div style={{ padding: "9px 16px", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.textDim, fontFamily: "Inter", fontSize: 13, fontWeight: 600 }}>Applications Closed</div>}
+              <button onClick={onSave} style={{ padding: "9px 14px", borderRadius: 10, background: saved ? "rgba(37,99,235,0.08)" : c.surface2, border: `1px solid ${saved ? "rgba(37,99,235,0.25)" : c.border}`, color: saved ? "#2563EB" : c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                <Ic n="bookmark" size={14} color={saved ? "#2563EB" : c.textMuted} /> {saved ? "Saved" : "Save"}
+              </button>
+              <button style={{ padding: "9px 14px", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Inter", fontSize: 13, fontWeight: 600 }}>
+                <Ic n="share" size={14} color={c.textMuted} /> Share
+              </button>
+            </div>
+          </div>
+
+          {/* Meta strip */}
+          <div style={{ display: "flex", gap: 24, marginTop: 22, paddingTop: 18, borderTop: `1px solid ${c.border}`, flexWrap: "wrap" }}>
+            {[
+              { label: "Organization",   val: opp.organization },
+              { label: "Type",           val: opp.type },
+              { label: "Location",       val: opp.location },
+              ...(opp.duration   ? [{ label: "Duration",   val: opp.duration   }] : []),
+              ...(opp.startDate  ? [{ label: "Start Date", val: opp.startDate  }] : []),
+              { label: "Deadline",       val: opp.deadline },
+              { label: "Eligibility",    val: opp.eligibility },
+              { label: "Department",     val: opp.department },
+              ...(opp.batch      ? [{ label: "Batch",      val: opp.batch      }] : []),
+              ...(opp.cgpa       ? [{ label: "Min CGPA",   val: opp.cgpa       }] : []),
+              ...(opp.paid !== undefined ? [{ label: "Compensation", val: opp.paid ? "Paid" : "Unpaid" }] : []),
+            ].map(m => (
+              <div key={m.label}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 3 }}>{m.label}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{m.val}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20, alignItems: "flex-start" }}>
+          {/* Left */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <Section title="About This Opportunity">
+              <p style={{ fontSize: 14, color: c.textMuted, lineHeight: 1.75, margin: 0 }}>{opp.description}</p>
+            </Section>
+
+            {opp.responsibilities && (
+              <Section title="Responsibilities">
+                <BulletList items={opp.responsibilities} />
+              </Section>
+            )}
+
+            {opp.requirements && (
+              <Section title="Requirements">
+                <BulletList items={opp.requirements} />
+              </Section>
+            )}
+
+            {opp.benefits && (
+              <Section title="Benefits">
+                <BulletList items={opp.benefits} />
+              </Section>
+            )}
+
+            {/* Eligibility */}
+            <Section title="Eligibility">
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {[
+                  { label: "Department", val: opp.department },
+                  ...(opp.batch ? [{ label: "Batch",    val: opp.batch }] : []),
+                  ...(opp.cgpa  ? [{ label: "Min CGPA", val: opp.cgpa  }] : []),
+                  { label: "Eligibility", val: opp.eligibility },
+                ].map(r => (
+                  <div key={r.label} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{r.label}</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{r.val}</div>
+                  </div>
+                ))}
+              </div>
+            </Section>
+
+            {/* Application Process */}
+            {opp.applicationProcess && (
+              <Section title="Application Process">
+                <div style={{ position: "relative" }}>
+                  <div style={{ position: "absolute", left: 13, top: 6, bottom: 0, width: 1, background: c.border }} />
+                  {opp.applicationProcess.map((step, i) => (
+                    <div key={i} style={{ display: "flex", gap: 14, marginBottom: 14 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 9, background: `${opp.color}10`, border: `1px solid ${opp.color}25`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Manrope", fontWeight: 800, fontSize: 11, color: opp.color, flexShrink: 0, zIndex: 1 }}>{i + 1}</div>
+                      <div style={{ paddingTop: 5, fontSize: 13, fontWeight: 600, color: c.text }}>{step}</div>
+                    </div>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {/* About Organization */}
+            <Section title="About the Organization">
+              <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: `${opp.color}10`, border: `1px solid ${opp.color}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{opp.emoji}</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: c.text }}>{opp.organization}</div>
+                  <div style={{ fontSize: 11, color: c.textDim, textTransform: "capitalize" }}>{opp.orgType}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: c.textMuted, lineHeight: 1.65, marginBottom: 12 }}>A verified organization offering quality opportunities for university students.</p>
+              <button style={{ padding: "7px 16px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+                View Organization <Ic n="chevR" size={12} color={c.textMuted} />
+              </button>
+            </Section>
+
+            {/* Related */}
+            {related.length > 0 && (
+              <Section title="You May Also Like">
+                {related.map((r, i) => (
+                  <div key={r.id} style={{ display: "flex", gap: 12, alignItems: "center", padding: "11px 12px", background: c.surface2, borderRadius: 11, border: `1px solid ${c.border}`, marginBottom: i < related.length - 1 ? 8 : 0, cursor: "pointer" }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = c.surface3)}
+                    onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = c.surface2)}>
+                    <div style={{ width: 4, height: 36, borderRadius: 2, background: r.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginBottom: 2 }}>{r.title}</div>
+                      <div style={{ fontSize: 11, color: c.textDim }}>{r.organization} · {r.deadlineShort}</div>
+                    </div>
+                    <DeadlineChip days={r.daysLeft} />
+                  </div>
+                ))}
+              </Section>
+            )}
+          </div>
+
+          {/* Sidebar */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* Deadline card */}
+            <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: c.cardShadow }}>
+              <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text, marginBottom: 12 }}>Application Deadline</div>
+              <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text, marginBottom: 6 }}>{opp.deadline}</div>
+              <DeadlineChip days={opp.daysLeft} />
+              {opp.daysLeft > 0 && !applied && (
+                <button onClick={() => setShowApply(true)} style={{ width: "100%", marginTop: 14, padding: "10px 0", borderRadius: 10, background: opp.color, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Apply Now</button>
+              )}
+              {applied && (
+                <div style={{ marginTop: 12, padding: "10px 12px", background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)", borderRadius: 10, display: "flex", gap: 7, alignItems: "center" }}>
+                  <Ic n="check" size={13} color="#10B981" />
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#10B981" }}>Applied</div>
+                    <div style={{ fontSize: 11, color: c.textDim }}>Application submitted.</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick info */}
+            <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: c.cardShadow }}>
+              <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text, marginBottom: 12 }}>Quick Info</div>
+              {[
+                { icon: "map",       label: opp.location + (opp.remote ? " (Remote)" : "") },
+                { icon: "users",     label: opp.eligibility },
+                { icon: "briefcase", label: opp.type },
+                ...(opp.duration  ? [{ icon: "clock",  label: opp.duration  }] : []),
+                ...(opp.startDate ? [{ icon: "award",  label: `Starts ${opp.startDate}` }] : []),
+              ].map((r, i) => (
+                <div key={i} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                  <Ic n={r.icon} size={13} color={c.textDim} />
+                  <span style={{ fontSize: 12, color: c.textMuted }}>{r.label}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* How to Apply */}
+            <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: c.cardShadow }}>
+              <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text, marginBottom: 12 }}>How to Apply</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {opp.daysLeft > 0 && !applied && (
+                  <button onClick={() => setShowApply(true)} style={{ width: "100%", padding: "9px 0", borderRadius: 9, background: opp.color, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                    Apply through UniLink <Ic n="chevR" size={12} color="#fff" />
+                  </button>
+                )}
+                <button style={{ width: "100%", padding: "8px 0", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 5 }}>
+                  <Ic n="link" size={12} color={c.textMuted} /> Apply on Website
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showApply && <ApplicationModal opp={opp} onClose={() => setShowApply(false)} onSubmit={onApply} />}
+    </div>
+  );
+}
+
+// ─── SAVED OPPORTUNITIES ──────────────────────────────────────────────────────────
+const SAVED_TYPE_FILTERS = ["All","Internships","Scholarships","Competitions","Research","Jobs"] as const;
+
+function SavedOpps({ savedIds, appliedIds, onToggleSave, onOpenOpp, onBrowse }: {
+  savedIds: Set<string>; appliedIds: Set<string>; onToggleSave: (id: string) => void;
+  onOpenOpp: (opp: Opportunity) => void; onBrowse: () => void;
+}) {
+  const { theme } = useTheme(); const c = tok(theme);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("All");
+  const [toast, setToast] = useState<string | null>(null);
+
+  const saved = OPPS.filter(o => savedIds.has(o.id));
+  const filtered = saved.filter(o => {
+    const mq = !query || o.title.toLowerCase().includes(query.toLowerCase()) || o.organization.toLowerCase().includes(query.toLowerCase());
+    const mf = filter === "All" || o.type === filter.slice(0, -1);
+    return mq && mf;
+  });
+
+  function handleRemove(id: string) { onToggleSave(id); setToast("Removed from saved."); }
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 100px", background: c.bg }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color: c.text, letterSpacing: "-0.02em", marginBottom: 4 }}>Saved Opportunities</h1>
+          <p style={{ fontSize: 13, color: c.textMuted }}>Keep track of opportunities you may want to apply for.</p>
+          {savedIds.size > 0 && <div style={{ fontSize: 12, fontWeight: 600, color: c.textDim, marginTop: 6 }}>{savedIds.size} saved</div>}
+        </div>
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: "1 1 220px" }}>
+            <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><Ic n="search" size={14} color={c.textDim} /></div>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search saved opportunities..."
+              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ display: "flex", gap: 5 }}>
+            {SAVED_TYPE_FILTERS.map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                style={{ padding: "6px 14px", borderRadius: 999, fontSize: 12, fontWeight: filter === f ? 700 : 500, background: filter === f ? `${c.primary}10` : "transparent", color: filter === f ? c.primary : c.textMuted, border: `1px solid ${filter === f ? c.primary + "30" : c.border}`, cursor: "pointer" }}>
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+        {filtered.length === 0 ? (
+          <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "60px 24px", textAlign: "center", boxShadow: c.cardShadow }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🔖</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: c.text, marginBottom: 6 }}>{saved.length === 0 ? "No Saved Opportunities" : "No Results"}</div>
+            <div style={{ fontSize: 13, color: c.textDim, marginBottom: 20 }}>{saved.length === 0 ? "Save opportunities you're interested in and they'll appear here." : "Try clearing your filters."}</div>
+            {saved.length === 0 && <button onClick={onBrowse} style={{ padding: "9px 22px", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Explore Opportunities</button>}
+          </div>
+        ) : (
+          <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, overflow: "hidden", boxShadow: c.cardShadow }}>
+            {filtered.map((opp, i) => (
+              <div key={opp.id} style={{ display: "flex", gap: 14, alignItems: "center", padding: "15px 20px", borderBottom: i < filtered.length - 1 ? `1px solid ${c.border}` : "none", transition: "background 0.13s" }}
+                onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = c.surface2)}
+                onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}>
+                <div style={{ width: 4, height: 44, borderRadius: 2, background: opp.color, flexShrink: 0 }} />
+                <div style={{ width: 36, height: 36, borderRadius: 10, background: `${opp.color}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{opp.emoji}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opp.title}</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 11, color: c.textMuted }}>{opp.organization}</span>
+                    <span style={{ fontSize: 11, color: c.textDim }}>·</span>
+                    <DeadlineChip days={opp.daysLeft} />
+                    {opp.savedAgo && <span style={{ fontSize: 11, color: c.textDim }}>· Saved {opp.savedAgo}</span>}
+                    {appliedIds.has(opp.id) && <span style={{ fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", borderRadius: 4, padding: "1px 6px" }}>Applied</span>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 7, flexShrink: 0 }}>
+                  <button onClick={() => onOpenOpp(opp)} style={{ padding: "7px 16px", borderRadius: 9, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>View</button>
+                  <button onClick={() => handleRemove(opp.id)} style={{ padding: "7px 10px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, cursor: "pointer" }} title="Remove">
+                    <Ic n="x" size={13} color={c.textDim} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {toast && <Toast msg={toast} onDismiss={() => setToast(null)} />}
+    </div>
+  );
+}
+
+// ─── MY APPLICATIONS ──────────────────────────────────────────────────────────────
+function MyApplications({ appliedIds, onOpenOpp, onBrowse }: {
+  appliedIds: Set<string>; onOpenOpp: (opp: Opportunity) => void; onBrowse: () => void;
+}) {
+  const { theme } = useTheme(); const c = tok(theme);
+  const [selected, setSelected] = useState<Application | null>(null);
+
+  const myApps = APPLICATIONS.filter(a => appliedIds.has(a.oppId) || true);
+  const counts = { total: myApps.length, review: myApps.filter(a => a.status === "under-review").length, shortlisted: myApps.filter(a => a.status === "shortlisted").length, accepted: myApps.filter(a => a.status === "accepted").length };
+
+  if (selected) {
+    const opp = OPPS.find(o => o.id === selected.oppId)!;
+    return (
+      <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 100px", background: c.bg }}>
+        <div style={{ maxWidth: 700, margin: "0 auto" }}>
+          <button onClick={() => setSelected(null)} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", color: c.textMuted, cursor: "pointer", fontFamily: "Inter", fontSize: 12, fontWeight: 600, marginBottom: 20, padding: 0 }}>
+            <Ic n="arrowL" size={14} color={c.textMuted} /> Back to Applications
+          </button>
+          <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 20, padding: "24px 28px", boxShadow: c.cardShadow, marginBottom: 20 }}>
+            <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 20 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 14, background: `${opp.color}10`, border: `1px solid ${opp.color}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24, flexShrink: 0 }}>{opp.emoji}</div>
+              <div>
+                <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text, marginBottom: 3 }}>{opp.title}</div>
+                <div style={{ fontSize: 12, color: c.textMuted }}>{opp.organization}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+              {[
+                { label: "Applied",      val: selected.appliedDate },
+                { label: "Current Status", val: APP_STATUS_CFG[selected.status].label },
+                { label: "Deadline",     val: opp.deadline },
+              ].map(r => (
+                <div key={r.label} style={{ padding: "12px 14px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}` }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 4 }}>{r.label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: r.label === "Current Status" ? APP_STATUS_CFG[selected.status].color : c.text }}>{r.val}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 16 }}>Application Timeline</div>
+            <div style={{ position: "relative" }}>
+              <div style={{ position: "absolute", left: 13, top: 6, bottom: 0, width: 1, background: c.border }} />
+              {selected.timeline.map((step, i) => (
+                <div key={i} style={{ display: "flex", gap: 14, marginBottom: 14 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: step.done ? `${opp.color}10` : c.surface2, border: `1px solid ${step.done ? opp.color + "30" : c.border}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1 }}>
+                    {step.done ? <Ic n="check" size={12} color={opp.color} /> : <div style={{ width: 7, height: 7, borderRadius: "50%", background: c.textDim }} />}
+                  </div>
+                  <div style={{ paddingTop: 4 }}>
+                    <div style={{ fontSize: 13, fontWeight: step.done ? 600 : 400, color: step.done ? c.text : c.textDim, marginBottom: 2 }}>{step.label}</div>
+                    <div style={{ fontSize: 11, color: c.textDim }}>{step.date}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <button onClick={() => onOpenOpp(opp)} style={{ padding: "9px 22px", borderRadius: 10, background: c.surface, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>View Opportunity</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 100px", background: c.bg }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color: c.text, letterSpacing: "-0.02em", marginBottom: 4 }}>My Applications</h1>
+          <p style={{ fontSize: 13, color: c.textMuted }}>Track the opportunities you&apos;ve applied for.</p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+          <StatCard label="Applications"  value={counts.total}       color="#2563EB" bg="rgba(37,99,235,0.08)"  icon="briefcase" />
+          <StatCard label="Under Review"  value={counts.review}      color="#F59E0B" bg="rgba(245,158,11,0.08)" icon="clock"     />
+          <StatCard label="Shortlisted"   value={counts.shortlisted} color="#8B5CF6" bg="rgba(139,92,246,0.08)" icon="star"      />
+          <StatCard label="Accepted"      value={counts.accepted}    color="#10B981" bg="rgba(16,185,129,0.08)" icon="check"     />
+        </div>
+
+        {myApps.length === 0 ? (
+          <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "60px 24px", textAlign: "center", boxShadow: c.cardShadow }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📋</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: c.text, marginBottom: 6 }}>No Applications Yet</div>
+            <div style={{ fontSize: 13, color: c.textDim, marginBottom: 20 }}>You haven&apos;t applied to any opportunities yet.</div>
+            <button onClick={onBrowse} style={{ padding: "9px 22px", borderRadius: 10, background: c.primary, color: "#fff", border: "none", fontFamily: "Inter", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Explore Opportunities</button>
+          </div>
+        ) : (
+          <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, overflow: "hidden", boxShadow: c.cardShadow }}>
+            {myApps.map((app, i) => {
+              const opp = OPPS.find(o => o.id === app.oppId);
+              if (!opp) return null;
+              return (
+                <div key={app.id} style={{ display: "flex", gap: 14, alignItems: "center", padding: "16px 20px", borderBottom: i < myApps.length - 1 ? `1px solid ${c.border}` : "none", transition: "background 0.13s" }}
+                  onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = c.surface2)}
+                  onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = "transparent")}>
+                  <div style={{ width: 4, height: 44, borderRadius: 2, background: opp.color, flexShrink: 0 }} />
+                  <div style={{ width: 38, height: 38, borderRadius: 11, background: `${opp.color}10`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{opp.emoji}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{opp.title}</div>
+                    <div style={{ fontSize: 11, color: c.textDim }}>{opp.organization} · Applied {app.appliedDate}</div>
+                  </div>
+                  <AppStatusPill status={app.status} />
+                  <button onClick={() => setSelected(app)} style={{ padding: "7px 16px", borderRadius: 9, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>View Application</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── OPPORTUNITIES LIST ───────────────────────────────────────────────────────────
+const TYPE_FILTERS = ["All","Internships","Scholarships","Competitions","Hackathons","Research","Fellowships","Jobs","Volunteering","Training","Workshops"] as const;
+
+function OppsList({ savedIds, appliedIds, onToggleSave, onApply, onOpenOpp, onSaved, onApplications }: {
+  savedIds: Set<string>; appliedIds: Set<string>;
+  onToggleSave: (id: string) => void; onApply: (id: string) => void;
+  onOpenOpp: (opp: Opportunity) => void; onSaved: () => void; onApplications: () => void;
+}) {
+  const { theme } = useTheme(); const c = tok(theme);
+  const [type, setType] = useState("All");
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("Recommended");
+  const [toast, setToast] = useState<string | null>(null);
+
+  const featured = OPPS.find(o => o.featured)!;
+  const rest = OPPS.filter(o => !o.featured);
+
+  const filtered = rest.filter(o => {
+    const mq = !query || o.title.toLowerCase().includes(query.toLowerCase()) || o.organization.toLowerCase().includes(query.toLowerCase());
+    const mt = type === "All" || o.type === type.slice(0, -1);
+    return mq && mt;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === "Deadline Soon") return a.daysLeft - b.daysLeft;
+    if (sort === "Newest") return 0;
+    return (b.matchPct ?? 0) - (a.matchPct ?? 0);
+  });
+
+  const closing = OPPS.filter(o => o.daysLeft > 0 && o.daysLeft <= 7).sort((a, b) => a.daysLeft - b.daysLeft);
+  const recommended = OPPS.filter(o => (o.matchPct ?? 0) >= 90).sort((a, b) => (b.matchPct ?? 0) - (a.matchPct ?? 0)).slice(0, 4);
+
+  function handleSave(id: string) {
+    const was = savedIds.has(id);
+    onToggleSave(id);
+    setToast(was ? "Removed from saved." : "Opportunity saved.");
+  }
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 100px", background: c.bg }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, marginBottom: 24, flexWrap: "wrap" }}>
+          <div>
+            <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color: c.text, letterSpacing: "-0.02em", marginBottom: 4 }}>Opportunities</h1>
+            <p style={{ fontSize: 13, color: c.textMuted }}>Discover internships, scholarships, competitions, research, and other opportunities built for students.</p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={onApplications} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              <Ic n="briefcase" size={13} color={c.textMuted} /> My Applications {appliedIds.size > 0 && <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: `${c.primary}10`, color: c.primary }}>{appliedIds.size}</span>}
+            </button>
+            <button onClick={onSaved} style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }}>
+              <Ic n="bookmark" size={13} color={c.textMuted} /> Saved ({savedIds.size})
+            </button>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+          <StatCard label="Total Opportunities" value={OPPS.length} color="#2563EB" bg="rgba(37,99,235,0.08)"  icon="zap"       />
+          <StatCard label="Closing Soon"         value={closing.length} color="#EF4444" bg="rgba(239,68,68,0.08)"  icon="alert"     />
+          <StatCard label="Your Applications"    value={appliedIds.size} color="#10B981" bg="rgba(16,185,129,0.08)" icon="check"     />
+          <StatCard label="Saved"                value={savedIds.size}   color="#8B5CF6" bg="rgba(139,92,246,0.08)" icon="bookmark"  />
+        </div>
+
+        {/* Featured */}
+        <FeaturedBanner opp={featured} saved={savedIds.has(featured.id)}
+          onSave={() => handleSave(featured.id)} onOpen={() => onOpenOpp(featured)} />
+
+        {/* Closing Soon strip */}
+        {closing.length > 0 && (
+          <div style={{ background: c.surface, border: "1px solid rgba(239,68,68,0.2)", borderRadius: 16, padding: "16px 20px", marginBottom: 22, boxShadow: c.cardShadow }}>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: "#EF4444", marginBottom: 12, display: "flex", gap: 6, alignItems: "center" }}>
+              <Ic n="alert" size={13} color="#EF4444" /> Closing Soon
+            </div>
+            <div style={{ display: "flex", gap: 10, overflowX: "auto" }}>
+              {closing.map(o => (
+                <div key={o.id} onClick={() => onOpenOpp(o)}
+                  style={{ flexShrink: 0, padding: "10px 14px", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 11, cursor: "pointer", minWidth: 170 }}
+                  onMouseEnter={e => ((e.currentTarget as HTMLElement).style.background = c.surface3)}
+                  onMouseLeave={e => ((e.currentTarget as HTMLElement).style.background = c.surface2)}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 4 }}>{o.title}</div>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                    <DeadlineChip days={o.daysLeft} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Search + Filters */}
+        <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
+          <div style={{ position: "relative", flex: "1 1 220px", minWidth: 180 }}>
+            <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><Ic n="search" size={14} color={c.textDim} /></div>
+            <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search opportunities..."
+              style={{ width: "100%", padding: "8px 12px 8px 34px", borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 13, outline: "none", boxSizing: "border-box" }} />
+          </div>
+          {[
+            { options: ["All Locations","Remote","On-site","Hybrid"] },
+            { options: ["All Eligibility","Undergrad","Postgrad","All Students"] },
+            { options: ["All Departments","CSE","EEE","SWE","BBA"] },
+            { options: ["Any Deadline","Today","This Week","This Month"] },
+          ].map((f, i) => (
+            <select key={i} style={{ padding: "8px 12px", borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 12, cursor: "pointer", outline: "none" }}>
+              {f.options.map(o => <option key={o}>{o}</option>)}
+            </select>
+          ))}
+          <select value={sort} onChange={e => setSort(e.target.value)}
+            style={{ padding: "8px 12px", borderRadius: 9, background: c.surface, border: `1px solid ${c.border}`, color: c.text, fontFamily: "Inter", fontSize: 12, cursor: "pointer", outline: "none" }}>
+            <option>Recommended</option><option>Deadline Soon</option><option>Newest</option>
+          </select>
+        </div>
+
+        {/* Type chips */}
+        <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+          {TYPE_FILTERS.map(f => (
+            <button key={f} onClick={() => setType(f)}
+              style={{ padding: "5px 14px", borderRadius: 999, fontSize: 12, fontWeight: type === f ? 700 : 500, background: type === f ? `${c.primary}10` : "transparent", color: type === f ? c.primary : c.textMuted, border: `1px solid ${type === f ? c.primary + "30" : c.border}`, cursor: "pointer" }}>
+              {f}
+            </button>
+          ))}
+        </div>
+
+        {/* Recommended section */}
+        {!query && type === "All" && (
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 4 }}>Recommended For You</div>
+            <div style={{ fontSize: 12, color: c.textDim, marginBottom: 14, display: "flex", gap: 6, alignItems: "center" }}>
+              <Ic n="star" size={12} color={c.primary} /> Based on your interests, courses, and academic profile.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(270px,1fr))", gap: 14 }}>
+              {recommended.map(o => (
+                <OppCard key={o.id} opp={o} saved={savedIds.has(o.id)} applied={appliedIds.has(o.id)}
+                  onSave={() => handleSave(o.id)} onOpen={() => onOpenOpp(o)} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* All / filtered results */}
+        <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 14 }}>
+          {type === "All" && !query ? "All Opportunities" : "Results"}
+          {sorted.length > 0 && <span style={{ fontSize: 12, fontWeight: 400, color: c.textDim, marginLeft: 8 }}>{sorted.length} found</span>}
+        </div>
+        {sorted.length === 0 ? (
+          <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "60px 24px", textAlign: "center", boxShadow: c.cardShadow }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🔍</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: c.text, marginBottom: 6 }}>No Opportunities Found</div>
+            <div style={{ fontSize: 13, color: c.textDim, marginBottom: 20 }}>No opportunities match your current filters.</div>
+            <button onClick={() => { setQuery(""); setType("All"); }} style={{ padding: "9px 20px", borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, color: c.textMuted, fontFamily: "Inter", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>Clear Filters</button>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(280px,1fr))", gap: 16 }}>
+            {sorted.map(o => (
+              <OppCard key={o.id} opp={o} saved={savedIds.has(o.id)} applied={appliedIds.has(o.id)}
+                onSave={() => handleSave(o.id)} onOpen={() => onOpenOpp(o)} />
+            ))}
+          </div>
+        )}
+      </div>
+      {toast && <Toast msg={toast} onDismiss={() => setToast(null)} />}
+    </div>
+  );
+}
+
+// ─── ROOT ─────────────────────────────────────────────────────────────────────────
+type OppView = "list" | "detail" | "saved" | "applications";
+
+export default function OpportunitiesPage() {
+  const [view, setView]          = useState<OppView>("list");
+  const [selected, setSelected]  = useState<Opportunity | null>(null);
+  const [savedIds, setSavedIds]  = useState<Set<string>>(new Set(["o2","o4"]));
+  const [appliedIds, setAppliedIds] = useState<Set<string>>(new Set(["o1","o3","o4"]));
+  const [toast, setToast]        = useState<string | null>(null);
+
+  function toggleSave(id: string) {
+    setSavedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }
+  function apply(id: string) {
+    setAppliedIds(prev => new Set([...prev, id]));
+    setToast("Application submitted!");
+  }
+  function openOpp(opp: Opportunity) { setSelected(opp); setView("detail"); }
+
+  if (view === "saved")        return <SavedOpps savedIds={savedIds} appliedIds={appliedIds} onToggleSave={toggleSave} onOpenOpp={opp => openOpp(opp)} onBrowse={() => setView("list")} />;
+  if (view === "applications") return <MyApplications appliedIds={appliedIds} onOpenOpp={opp => openOpp(opp)} onBrowse={() => setView("list")} />;
+  if (view === "detail" && selected) return (
+    <>
+      <OppDetail opp={selected} saved={savedIds.has(selected.id)} applied={appliedIds.has(selected.id)}
+        onSave={() => toggleSave(selected.id)} onApply={() => apply(selected.id)} onBack={() => setView("list")} />
+      {toast && <Toast msg={toast} onDismiss={() => setToast(null)} />}
+    </>
+  );
+  return (
+    <>
+      <OppsList savedIds={savedIds} appliedIds={appliedIds} onToggleSave={toggleSave} onApply={apply}
+        onOpenOpp={openOpp} onSaved={() => setView("saved")} onApplications={() => setView("applications")} />
+      {toast && <Toast msg={toast} onDismiss={() => setToast(null)} />}
+    </>
+  );
+}

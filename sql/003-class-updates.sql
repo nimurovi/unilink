@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS class_updates (
+ id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ class_id INT UNSIGNED NOT NULL,
+ author_id INT UNSIGNED NOT NULL,
+ code VARCHAR(100) NOT NULL,
+ type VARCHAR(50) NOT NULL,
+ detail TEXT NOT NULL,
+ note TEXT NOT NULL,
+ status ENUM('published','archived') NOT NULL DEFAULT 'published',
+ version INT UNSIGNED NOT NULL DEFAULT 1,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ KEY class_updates_feed (class_id, created_at),
+ CONSTRAINT fk_updates_class FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE RESTRICT,
+ CONSTRAINT fk_updates_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

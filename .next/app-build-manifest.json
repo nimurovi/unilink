@@ -1,0 +1,24 @@
+{
+  "pages": {
+    "/api/routine/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/routine/route.js"
+    ],
+    "/api/assignments/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/assignments/route.js"
+    ],
+    "/api/materials/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/materials/route.js"
+    ],
+    "/api/class-updates/route": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/api/class-updates/route.js"
+    ]
+  }
+}
