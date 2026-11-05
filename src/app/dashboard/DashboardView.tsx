@@ -1,4 +1,7 @@
 "use client";
+import {AnnouncementsFeed} from "@/components/ui/AnnouncementsView";
+import {useAnnouncement} from "@/lib/announcements";
+import {UpcomingExams} from "@/components/ui/ExamsView";
 import {useRoutine,useRoutineClock} from "@/lib/routine";
 import {TodayRoutine} from "@/components/ui/RoutineView";
 import { useState, useRef, useEffect, useContext } from "react";
@@ -18,7 +21,8 @@ import EventsPage from "@/app/events/page";
 import ClubsPage from "@/app/clubs/page";
 import OpportunitiesPage from "@/app/opportunities/page";
 import LostFoundPage from "@/app/lost-found/page";
-import NotificationsPage, { INITIAL_UNREAD } from "@/app/notifications/NotificationsView";
+import {useNotifications} from "@/lib/notifications";
+import NotificationsPage from "@/app/notifications/NotificationsView";
 import DirectoryPage from "@/app/directory/page";
 import SettingsPage from "@/app/settings/page";
 import AchievementsPage from "@/app/achievements/page";
@@ -112,7 +116,7 @@ const NAV: NavGroup[] = [
   {
     group: "OVERVIEW", items: [
       { id: "dashboard", label: "Dashboard", icon: "home" },
-      { id: "notifications", label: "Notifications", icon: "bell", badge: 8 },
+      { id: "notifications", label: "Notifications", icon: "bell" },
     ]
   },
   {
@@ -126,7 +130,7 @@ const NAV: NavGroup[] = [
   },
   {
     group: "CAMPUS", items: [
-      { id: "announcements", label: "Announcements", icon: "megaphone", badge: 3 },
+      { id: "announcements", label: "Announcements", icon: "megaphone" },
       { id: "events", label: "Events", icon: "event" },
       { id: "clubs", label: "Clubs & Communities", icon: "users" },
       { id: "opportunities", label: "Opportunities", icon: "briefcase" },
@@ -153,6 +157,7 @@ function Sidebar({ t, activeNav, setActiveNav, onClose, onCR }: {
   t: Theme; activeNav: string; setActiveNav: (id: string) => void; onClose?: () => void; onCR?: () => void;
 }) {
   const c = tok(t);
+  const unread=useNotifications().entries.filter(e=>e.unread).length;
   return (
     <div style={{
       width: 236, flexShrink: 0, background: c.sidebar,
@@ -198,9 +203,9 @@ function Sidebar({ t, activeNav, setActiveNav, onClose, onCR }: {
                 >
                   <Ic n={item.icon} size={15} color={isActive ? c.activeNav.text : c.textDim} />
                   <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge != null && (
+                  {(item.id === "notifications" ? unread > 0 : item.badge != null) && (
                     <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: isActive ? `rgba(37,99,235,0.15)` : c.surface2, color: isActive ? c.primary : c.textDim }}>
-                      {item.badge}
+                      {item.id === "notifications" ? unread : item.badge}
                     </span>
                   )}
                 </button>
@@ -262,6 +267,7 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
   t: Theme; onMenuClick: () => void; notifOpen: boolean; setNotifOpen: (v: boolean) => void; onCR?: () => void; onNavigate?: (id: string) => void;
 }) {
   const c = tok(t);
+  const unread=useNotifications().entries.filter(e=>e.unread).length;
   const { toggle } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -315,9 +321,9 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
         {/* Notifications */}
         <button onClick={() => setNotifOpen(!notifOpen)} style={{ width: 36, height: 36, borderRadius: 10, background: c.surface2, border: `1px solid ${c.border}`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", position: "relative" }}>
           <Ic n="bell" size={15} color={c.textMuted} />
-          {INITIAL_UNREAD > 0 && (
+          {unread > 0 && (
             <div style={{ position: "absolute", top: -5, right: -5, minWidth: 16, height: 16, borderRadius: 8, background: "#EF4444", border: `2px solid ${c.surface}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter", fontWeight: 700, fontSize: 9, color: "#fff", padding: "0 3px" }}>
-              {INITIAL_UNREAD > 9 ? "9+" : INITIAL_UNREAD}
+              {unread > 9 ? "9+" : unread}
             </div>
           )}
         </button>
@@ -419,57 +425,24 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
 
 // ─── NOTIFICATION PANEL ───────────────────────────────────────────────────────
 function NotifPanel({ t, onClose, onViewAll }: { t: Theme; onClose: () => void; onViewAll: () => void }) {
-  const c = tok(t);
-  const notifs = [
-    { icon: "📚", title: "Midterm Examination Updated", sub: "CSE 305 — Important", time: "10:24 AM", unread: true },
-    { icon: "📝", title: "Database Assignment 02 due tomorrow", sub: "CSE 305", time: "9:15 AM", unread: true },
-    { icon: "📚", title: "New lecture material uploaded", sub: "CSE 401 — Graph Traversal.pdf", time: "8:30 AM", unread: true },
-    { icon: "🗓️", title: "AI Workshop starts tomorrow", sub: "September 2 · 3:00 PM", time: "Yesterday", unread: false },
-    { icon: "🔍", title: "Possible Lost & Found match", sub: "Black Backpack", time: "Aug 28", unread: false },
-  ];
-  const unread = notifs.filter(n => n.unread).length;
-  return (
-    <div style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 360, background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, boxShadow: "0 16px 48px rgba(0,0,0,0.18)", zIndex: 50, overflow: "hidden", animation: "fadeUp .22s ease both" }}>
-      <div style={{ padding: "14px 18px", borderBottom: `1px solid ${c.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <span style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Notifications</span>
-          {unread > 0 && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", borderRadius: 999, padding: "1px 7px" }}>{unread} unread</span>}
-        </div>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: c.primary, fontWeight: 600, cursor: "pointer" }}>Mark all read</span>
-          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", display: "flex" }}><Ic n="x" size={14} color={c.textDim} /></button>
-        </div>
-      </div>
-      {notifs.map((n, i) => (
-        <div key={i} style={{ padding: "12px 18px", display: "flex", gap: 12, alignItems: "flex-start", borderBottom: `1px solid ${c.border}`, background: n.unread ? (t === "light" ? "#F0F5FF" : "rgba(59,130,246,0.06)") : "transparent", cursor: "pointer", position: "relative" }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = c.surface2)}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = n.unread ? (t === "light" ? "#F0F5FF" : "rgba(59,130,246,0.06)") : "transparent")}>
-          {n.unread && <div style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", width: 5, height: 5, borderRadius: "50%", background: "#2563EB" }} />}
-          <div style={{ width: 34, height: 34, borderRadius: 10, background: c.surface2, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, flexShrink: 0, marginLeft: 4 }}>{n.icon}</div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 13, fontWeight: n.unread ? 600 : 500, color: c.text, marginBottom: 2, lineHeight: 1.35, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.title}</div>
-            <div style={{ fontSize: 11, color: c.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.sub}</div>
-          </div>
-          <span style={{ fontSize: 10, color: c.textDim, flexShrink: 0 }}>{n.time}</span>
-        </div>
-      ))}
-      <div style={{ padding: "12px 18px", display: "flex", justifyContent: "center" }}>
-        <button onClick={() => { onClose(); onViewAll(); }} style={{ fontSize: 13, color: c.primary, fontWeight: 600, cursor: "pointer", background: "none", border: "none" }}>View all notifications →</button>
-      </div>
-    </div>
-  );
+ const c=tok(t),{entries,loading,error}=useNotifications();
+ return <div style={{position:'absolute',top:'calc(100% + 10px)',right:0,width:'min(360px,90vw)',maxHeight:'70dvh',overflowY:'auto',background:c.surface,color:c.text,border:`1px solid ${c.border}`,borderRadius:16,padding:18,zIndex:50}}>
+ <div style={{display:'flex',justifyContent:'space-between'}}><strong>Notifications</strong><button onClick={onClose} aria-label="Close notifications">×</button></div>
+ {loading?<p>Loading…</p>:error?<p role="alert">{error}</p>:entries.length?entries.slice(0,5).map(e=><button key={e.key} onClick={onViewAll} style={{display:'block',width:'100%',textAlign:'left',padding:'14px 0',color:c.text,background:'none',border:0,borderBottom:`1px solid ${c.border}`,cursor:'pointer'}}>{e.unread?'● ':''}{e.title}</button>):<p>No class activity yet.</p>}
+ <button onClick={onViewAll} style={{color:c.primary,marginTop:14}}>View all notifications →</button></div>;
 }
 
 // ─── STAT CARDS ────────────────────────────────────────────────────────────────
 function StatCards({ t }: { t: Theme }) {
   const assignmentData=useAssignments();
+  const announcementData=useAnnouncement();
   const routine=useRoutine(),routineClock=useRoutineClock();
   const c = tok(t);
   const stats = [
     { label: "Today's Classes", value: routine.loading||routine.error||!routineClock?"—":String(routine.entries.filter(e=>e.weekday===routineClock.day).length), sub: "Weekly routine", icon: "📚", color: c.primary, iconBg: `rgba(37,99,235,0.1)` },
     { label: "Assignments", value: String(assignmentData.assignments.filter(a=>a.status==="due-soon").length), sub: "Due soon", icon: "📝", color: "#F59E0B", iconBg: "rgba(245,158,11,0.1)" },
     { label: "Events", value: "5", sub: "This week", icon: "🎪", color: "#8B5CF6", iconBg: "rgba(139,92,246,0.1)" },
-    { label: "Announcements", value: "8", sub: "New today", icon: "📢", color: "#10B981", iconBg: "rgba(16,185,129,0.1)" },
+    { label: "Announcements", value: announcementData.loading||announcementData.error?"—":String(announcementData.entries.length), sub: "Published for your class", icon: "📢", color: "#10B981", iconBg: "rgba(16,185,129,0.1)" },
   ];
   return (
     <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 }}>
@@ -516,45 +489,7 @@ function ClassUpdatesWidget() {
   return <ClassUpdatesFeed limit={3} />;
 }
 
-function AnnouncementsWidget({ t, onNavigate }: { t: Theme; onNavigate?: (id: string) => void }) {
-  const c = tok(t);
-  const items = [
-    { emoji: "📚", title: "Midterm syllabus updated", from: "Dr. Rahman", sourceType: "Teacher" as SourceType, time: "2 hours ago", priority: "high" },
-    { emoji: "⚠️", title: "CSE 305 class delayed to 11:00 AM", from: "CR · Section B", sourceType: "CR" as SourceType, time: "10 min ago", priority: "high" },
-    { emoji: "📢", title: "University seminar registration is now open.", from: "University Administration", sourceType: "University" as SourceType, time: "Yesterday", priority: "medium" },
-    { emoji: "📋", title: "Assignment submission deadline extended", from: "Database Management", sourceType: "Teacher" as SourceType, time: "Yesterday", priority: "low" },
-  ];
-  const priorityDot: Record<string, string> = { high: "#EF4444", medium: "#F59E0B", low: "#10B981" };
-  return (
-    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text }}>Important Announcements</h3>
-        <span onClick={() => onNavigate?.("announcements")} style={{ fontSize: 12, color: c.primary, fontWeight: 600, cursor: "pointer" }}>View All →</span>
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {items.map((a, i) => (
-          <div key={i} style={{ padding: "13px 14px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}`, cursor: "pointer", transition: "all 0.16s ease" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.borderColor = c.primary; (e.currentTarget as HTMLElement).style.background = t === "light" ? "#FAFBFF" : "rgba(59,130,246,0.06)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.borderColor = c.border; (e.currentTarget as HTMLElement).style.background = c.surface2; }}
-          >
-            <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
-              <div style={{ width: 32, height: 32, borderRadius: 9, background: c.surface3, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, flexShrink: 0 }}>{a.emoji}</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: c.text, marginBottom: 5, lineHeight: 1.4 }}>{a.title}</div>
-                <div style={{ display: "flex", gap: 7, alignItems: "center", flexWrap: "wrap" }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: priorityDot[a.priority], flexShrink: 0 }} />
-                  <span style={{ fontSize: 11, color: c.textMuted }}>{a.from}</span>
-                  <SourceBadge source={a.sourceType} t={t} />
-                </div>
-              </div>
-              <span style={{ fontSize: 11, color: c.textDim, flexShrink: 0 }}>{a.time}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+function AnnouncementsWidget({onNavigate}:{t:Theme;onNavigate?:(id:string)=>void}){return <AnnouncementsFeed onView={()=>onNavigate?.("announcements")}/>;}
 
 // ─── ASSIGNMENTS ──────────────────────────────────────────────────────────────
 function AssignmentsWidget({ t, onNavigate }: { t: Theme; onNavigate?: (id: string) => void }) {
@@ -931,6 +866,7 @@ function MobileBottomNav({ t, active, setActive }: { t: Theme; active: string; s
 export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?: () => void } = {}) {
   const router = useRouter();
   const assignmentData=useAssignments();
+  const announcementData=useAnnouncement();
   const routine=useRoutine(),routineClock=useRoutineClock();
   const submitted=assignmentData.assignments.filter(a=>a.hasSubmission).length;
   const assignmentTotal=assignmentData.assignments.length;
@@ -1006,7 +942,7 @@ export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?
           {activeNav === "clubs" && <ClubsPage />}
           {activeNav === "opportunities" && <OpportunitiesPage />}
           {activeNav === "lostfound" && <div data-testid="lost-found-scroll" style={{ flex: 1, minHeight: 0, overflowY: "auto" }}><LostFoundPage /></div>}
-          {activeNav === "notifications" && <NotificationsPage onNavigate={id => handleSetActiveNav(id)} />}
+          {activeNav === "notifications" && <NotificationsPage onNavigate={id => id === "class-updates" ? window.location.assign("/class-updates") : handleSetActiveNav(id)} />}
           {activeNav === "directory" && <DirectoryPage />}
           {activeNav === "settings" && <SettingsPage />}
           {activeNav === "achievements" && <AchievementsPage />}
@@ -1021,7 +957,7 @@ export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?
                   { label: "Today's Classes", value: routine.loading||routine.error||!routineClock?"—":String(routine.entries.filter(e=>e.weekday===routineClock.day).length), sub: "Weekly routine", icon: "📚", color: c.primary, iconBg: `rgba(37,99,235,0.1)` },
                   { label: "Class Updates", value: String(updateCount), sub: "From your CR", icon: "⚠️", color: "#8B5CF6", iconBg: "rgba(139,92,246,0.1)" },
                   { label: "Events", value: "5", sub: "This week", icon: "🎪", color: "#F59E0B", iconBg: "rgba(245,158,11,0.1)" },
-                  { label: "Announcements", value: "8", sub: "New today", icon: "📢", color: "#10B981", iconBg: "rgba(16,185,129,0.1)" },
+                  { label: "Announcements", value: announcementData.loading||announcementData.error?"—":String(announcementData.entries.length), sub: "Published for your class", icon: "📢", color: "#10B981", iconBg: "rgba(16,185,129,0.1)" },
                 ].map((s) => (
                   <div key={s.label} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 12 }}>
                     <div style={{ width: 40, height: 40, borderRadius: 12, background: s.iconBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{s.icon}</div>
@@ -1039,6 +975,7 @@ export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?
                 {/* Left column */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                   <TodaySchedule t={theme} onNavigate={handleSetActiveNav} />
+                  <UpcomingExams onView={()=>handleSetActiveNav("exams")}/>
                   <AnnouncementsWidget t={theme} onNavigate={handleSetActiveNav} />
                   <ClassUpdatesWidget />
                   <EventsWidget t={theme} onNavigate={handleSetActiveNav} />

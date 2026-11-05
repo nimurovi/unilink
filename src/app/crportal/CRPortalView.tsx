@@ -1,4 +1,8 @@
 "use client";
+import NotificationsPage from "@/app/notifications/NotificationsView";
+import {useNotifications} from "@/lib/notifications";
+import AnnouncementsView,{AnnouncementEditor,AnnouncementsFeed} from "@/components/ui/AnnouncementsView";
+import ExamsView,{ExamEditor,UpcomingExams} from "@/components/ui/ExamsView";
 import RoutineView,{RoutineEditor,TodayRoutine} from "@/components/ui/RoutineView";
 import {useRoutine,useRoutineClock} from "@/lib/routine";
 import AssignmentsView from "@/app/assignments/AssignmentsView";
@@ -88,9 +92,9 @@ function Ic({ n, size = 16, color = "currentColor" }: { n: string; size?: number
 type NavItem = { id: string; label: string; icon: string; badge?: number };
 type NavGroup = { group: string; items: NavItem[] };
 const CR_NAV: NavGroup[] = [
-  { group: "OVERVIEW", items: [{ id: "dashboard", label: "Dashboard", icon: "home" }, { id: "notifications", label: "Notifications", icon: "bell", badge: 5 }] },
+  { group: "OVERVIEW", items: [{ id: "dashboard", label: "Dashboard", icon: "home" }, { id: "notifications", label: "Notifications", icon: "bell" }] },
   { group: "ACADEMIC", items: [{ id: "routine", label: "Routine", icon: "calendar" }, { id: "materials", label: "Class Materials", icon: "folder" }, { id: "assignments", label: "Assignments", icon: "clipboard" }, { id: "exams", label: "Exams", icon: "award" }] },
-  { group: "CLASS MANAGEMENT", items: [{ id: "classupdates", label: "Class Updates", icon: "alert" }] },
+  { group: "CLASS MANAGEMENT", items: [{ id: "classupdates", label: "Class Updates", icon: "alert" }, { id: "announcements", label: "Announcements", icon: "megaphone" }] },
   { group: "CAMPUS", items: [{ id: "events", label: "Events", icon: "event" }] },
 ];
 
@@ -138,6 +142,7 @@ function StatusBadge({ status }: { status: Status }) {
 function CRSidebar({ active, setActive, onClose }: { active: string; setActive: (id: string) => void; onClose?: () => void }) {
   const { theme } = useTheme();
   const c = tok(theme);
+  const unread=useNotifications().entries.filter(e=>e.unread).length;
   return (
     <div style={{ width: 236, height: "100%", background: c.sidebar, borderRight: `1px solid ${c.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
       {/* Brand */}
@@ -176,8 +181,8 @@ function CRSidebar({ active, setActive, onClose }: { active: string; setActive: 
                 >
                   <Ic n={item.icon} size={15} color={isActive ? c.activeNav.text : c.textDim} />
                   <span style={{ flex: 1 }}>{item.label}</span>
-                  {item.badge && (
-                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: c.primary + "18", color: c.primary, border: `1px solid ${c.primary}22` }}>{item.badge}</span>
+                  {(item.id === "notifications" ? unread > 0 : item.badge) && (
+                    <span style={{ padding: "1px 6px", borderRadius: 999, fontSize: 10, fontWeight: 700, background: c.primary + "18", color: c.primary, border: `1px solid ${c.primary}22` }}>{item.id === "notifications" ? unread : item.badge}</span>
                   )}
                 </button>
               );
@@ -200,9 +205,10 @@ function CRSidebar({ active, setActive, onClose }: { active: string; setActive: 
 }
 
 // ─── CR HEADER ───────────────────────────────────────────────────────────────────
-function CRHeader({ onMenuClick, onBack }: { onMenuClick: () => void; onBack: () => void }) {
+function CRHeader({ onMenuClick, onBack, onNotifications }: { onMenuClick: () => void; onBack: () => void; onNotifications: () => void }) {
   const { theme, toggle } = useTheme();
   const c = tok(theme);
+  const unread=useNotifications().entries.filter(e=>e.unread).length;
   const [searchOpen, setSearchOpen] = useState(false);
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -235,12 +241,12 @@ function CRHeader({ onMenuClick, onBack }: { onMenuClick: () => void; onBack: ()
       )}
 
       {/* Bell */}
-      <button style={{ position: "relative", background: "none", border: "none", cursor: "pointer", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, transition: "background 0.14s" }}
+      <button aria-label={`Notifications: ${unread} unread`} onClick={onNotifications} style={{ position: "relative", background: "none", border: "none", cursor: "pointer", width: 36, height: 36, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 9, transition: "background 0.14s" }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = c.surface2)}
         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
       >
         <Ic n="bell" size={18} color={c.textMuted} />
-        <div style={{ position: "absolute", top: 7, right: 7, width: 8, height: 8, borderRadius: "50%", background: "#EF4444", border: `2px solid ${c.surface}` }} />
+        {unread > 0 && <div style={{ position: "absolute", top: 7, right: 7, width: 8, height: 8, borderRadius: "50%", background: "#EF4444", border: `2px solid ${c.surface}` }} />}
       </button>
 
       {/* Theme toggle */}
@@ -338,73 +344,13 @@ function UploadMaterialModal({ onClose }: { onClose: () => void }) {
 function CreateAssignmentModal({onClose}:{onClose:()=>void}){return <AssignmentEditor onClose={onClose}/>;}
 
 // Create Announcement Modal
-function CreateAnnouncementModal({ onClose }: { onClose: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const [category, setCategory] = useState("Academic");
-  return (
-    <Modal title="Post Announcement" onClose={onClose} wide>
-      <FormField label="Title"><FieldInput placeholder="e.g. Midterm syllabus updated" /></FormField>
-      <FormField label="Message"><FieldTextarea placeholder="Write your announcement…" rows={4} /></FormField>
-      <FormField label="Category">
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {["Academic", "Schedule", "Exam", "Important", "General"].map((cat) => {
-            const active = category === cat;
-            return (
-              <button key={cat} onClick={() => setCategory(cat)} style={{ padding: "5px 13px", borderRadius: 999, fontSize: 12, fontWeight: active ? 700 : 500, background: active ? `${c.primary}12` : c.surface2, color: active ? c.primary : c.textMuted, border: `1px solid ${active ? c.primary + "30" : c.border}`, cursor: "pointer", transition: "all 0.14s" }}>
-                {cat}
-              </button>
-            );
-          })}
-        </div>
-      </FormField>
-      <FormField label="Attachment (optional)"><FieldInput placeholder="Upload file or paste link…" /></FormField>
-      <FormField label="Target Audience">
-        <div style={{ display: "flex", gap: 8 }}>
-          {["CSE", "Batch 52", "Section B"].map((t) => {
-            return <span key={t} style={{ padding: "4px 12px", borderRadius: 999, fontSize: 12, fontWeight: 600, background: `${c.primary}12`, color: c.primary, border: `1px solid ${c.primary}25` }}>{t}</span>;
-          })}
-        </div>
-      </FormField>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 8 }}>
-        <GhostBtn onClick={onClose}>Save Draft</GhostBtn>
-        <PrimaryBtn icon="megaphone" onClick={onClose}>Publish Now</PrimaryBtn>
-      </div>
-    </Modal>
-  );
-}
+function CreateAnnouncementModal({onClose}:{onClose:()=>void}){return <AnnouncementEditor onClose={onClose}/>;}
 
 // Update Routine Modal
 function UpdateRoutineModal({onClose}:{onClose:()=>void}){return <RoutineEditor onClose={onClose}/>;}
 
 // Add Exam Modal
-function AddExamModal({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal title="Add Exam" onClose={onClose}>
-      <FormField label="Course">
-        <FieldSelect>
-          {["Database Management", "Algorithms", "Software Engineering", "Computer Networks", "Artificial Intelligence", "Operating Systems"].map(n => <option key={n}>{n}</option>)}
-        </FieldSelect>
-      </FormField>
-      <FormField label="Exam Type">
-        <FieldSelect>
-          {["Quiz", "Midterm", "Final", "Lab Exam"].map(t => <option key={t}>{t}</option>)}
-        </FieldSelect>
-      </FormField>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <FormField label="Date"><FieldInput type="date" /></FormField>
-        <FormField label="Time"><FieldInput type="time" /></FormField>
-        <FormField label="Room"><FieldInput placeholder="502" /></FormField>
-        <FormField label="Duration"><FieldInput placeholder="1.5 hours" /></FormField>
-      </div>
-      <FormField label="Syllabus"><FieldTextarea placeholder="Topics covered in this exam…" rows={2} /></FormField>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 8 }}>
-        <GhostBtn onClick={onClose}>Save Draft</GhostBtn>
-        <PrimaryBtn icon="award" onClick={onClose}>Publish Exam</PrimaryBtn>
-      </div>
-    </Modal>
-  );
-}
+function AddExamModal({onClose}:{onClose:()=>void}){return <ExamEditor onClose={onClose}/>;}
 
 // Create Event Modal
 function CreateEventModal({ onClose }: { onClose: () => void }) {
@@ -701,16 +647,7 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
     { verb: "You posted", detail: "Midterm syllabus announcement", time: "3 days ago", icon: "megaphone" },
   ];
 
-  const announcements = [
-    { title: "Database class moved to Room 605", time: "30 minutes ago", status: "published" as Status },
-    { title: "Midterm syllabus updated", time: "Yesterday", status: "published" as Status },
-    { title: "Lab session cancelled Thursday", time: "2 hours ago", status: "pending" as Status },
-  ];
 
-  const exams = [
-    { title: "Midterm Examination", course: "Database Management", date: "Sep 10", time: "10:00 AM", room: "502", status: "published" as Status },
-    { title: "Quiz 03", course: "Algorithms", date: "Sep 5", time: "12:00 PM", room: "405", status: "pending" as Status },
-  ];
 
   const lostFound = [
     { type: "Lost", item: "AirPods", location: "Central Library", when: "Today", color: "#EF4444" },
@@ -916,55 +853,9 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
                 <button style={{ fontSize: 12, fontWeight: 600, color: c.primary, background: "none", border: "none", cursor: "pointer", padding: 0 }}>View Activity History →</button>
               </div>
 
-              {/* Announcements */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Announcements</div>
-                  <PrimaryBtn small icon="megaphone" onClick={() => setModal("announcement")}>Post</PrimaryBtn>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  {announcements.map((a, i) => (
-                    <div key={i} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 5 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: c.text, lineHeight: 1.4 }}>{a.title}</div>
-                        <StatusBadge status={a.status} />
-                      </div>
-                      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "#8B5CF6", background: "rgba(139,92,246,0.08)", padding: "1px 7px", borderRadius: 999, border: "1px solid rgba(139,92,246,0.18)" }}>Posted by CR</span>
-                        <span style={{ fontSize: 10, color: c.textDim }}>{a.time}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <button style={{ fontSize: 12, fontWeight: 600, color: c.primary, background: "none", border: "none", cursor: "pointer", marginTop: 10, padding: 0 }}>View All →</button>
-              </div>
+              <AnnouncementsFeed onView={()=>onNavigate("announcements")} onAdd={()=>setModal("announcement")}/>
 
-              {/* Upcoming Exams */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-                  <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Upcoming Exams</div>
-                  <GhostBtn small icon="plus" onClick={() => setModal("exam")}>Add Exam</GhostBtn>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
-                  {exams.map((ex, i) => (
-                    <div key={i} style={{ padding: "12px 14px", background: c.surface2, borderRadius: 11, border: `1px solid ${c.border}` }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 6 }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: c.text }}>{ex.title}</div>
-                        <StatusBadge status={ex.status} />
-                      </div>
-                      <div style={{ fontSize: 11, color: c.textMuted }}>{ex.course}</div>
-                      <div style={{ display: "flex", gap: 12, marginTop: 7 }}>
-                        {[{ icon: "calendar", val: ex.date }, { icon: "clock", val: ex.time }, { icon: "map", val: `Rm ${ex.room}` }].map(m => (
-                          <div key={m.val} style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                            <Ic n={m.icon} size={11} color={c.textDim} />
-                            <span style={{ fontSize: 11, color: c.textDim }}>{m.val}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <UpcomingExams onView={()=>onNavigate("exams")} onAdd={()=>setModal("exam")}/>
 
               {/* Lost & Found */}
               <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
@@ -1197,390 +1088,6 @@ function CRClassUpdatesPage() {
 // ─── CR ASSIGNMENTS PAGE ──────────────────────────────────────────────────────────
 
 function CRAssignmentsPage(){return <AssignmentsView/>;}
-
-// ─── CR EXAMS PAGE ────────────────────────────────────────────────────────────────
-
-type ExamStatus = "Upcoming" | "This Week" | "Completed";
-type ExamType = "Midterm" | "Final" | "Quiz" | "Viva" | "Practical";
-
-const EXAMS_DATA = [
-  { id: "e1", title: "Midterm Examination", course: "Database Management", code: "CSE 305", type: "Midterm" as ExamType, date: "Sep 10", time: "10:00 AM – 12:00 PM", room: "502", duration: "2 hours", source: "Department", status: "This Week" as ExamStatus, instructions: "Bring your student ID and approved calculator. No electronic devices permitted. Closed book examination." },
-  { id: "e2", title: "Algorithms Midterm", course: "Algorithms", code: "CSE 301", type: "Midterm" as ExamType, date: "Sep 12", time: "2:00 PM – 4:00 PM", room: "405", duration: "2 hours", source: "Department", status: "Upcoming" as ExamStatus, instructions: "Open book allowed. Bring your textbook and class notes. No electronic devices." },
-  { id: "e3", title: "Software Engineering Quiz", course: "Software Engineering", code: "CSE 310", type: "Quiz" as ExamType, date: "Sep 15", time: "11:00 AM – 12:00 PM", room: "302", duration: "1 hour", source: "Teacher", status: "Upcoming" as ExamStatus, instructions: "Covers chapters 1–5. Short answer and MCQ format." },
-  { id: "e4", title: "Network Lab Practical", course: "Computer Networks", code: "CSE 307", type: "Practical" as ExamType, date: "Sep 18", time: "10:00 AM – 1:00 PM", room: "Lab 3", duration: "3 hours", source: "Teacher", status: "Upcoming" as ExamStatus, instructions: "Bring your lab manual. Equipment will be provided. Individual assessment." },
-  { id: "e5", title: "DB Quiz 01", course: "Database Management", code: "CSE 305", type: "Quiz" as ExamType, date: "Aug 20", time: "10:00 AM – 11:00 AM", room: "502", duration: "1 hour", source: "Department", status: "Completed" as ExamStatus, instructions: "Covered SQL basics and ER diagrams." },
-  { id: "e6", title: "Algorithms Quiz 02", course: "Algorithms", code: "CSE 301", type: "Quiz" as ExamType, date: "Aug 24", time: "2:00 PM – 3:00 PM", room: "405", duration: "1 hour", source: "Teacher", status: "Completed" as ExamStatus, instructions: "Sorting algorithms and complexity analysis." },
-];
-
-const EXAM_ACTIVITY = [
-  { verb: "You shared a reminder", detail: "Database Management Midterm", time: "2 hours ago" },
-  { verb: "You shared a verified update", detail: "Algorithms Exam Room Changed", time: "Yesterday" },
-  { verb: "You viewed", detail: "Software Engineering Quiz", time: "2 days ago" },
-];
-
-function ShareExamReminderModal({ exam, onClose }: { exam: typeof EXAMS_DATA[0]; onClose: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const [screen, setScreen] = useState<"form" | "preview" | "success">("form");
-  const [msg, setMsg] = useState("");
-
-  const ta: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.surface2, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box", resize: "vertical" };
-
-  if (screen === "success") return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "44px 36px", maxWidth: 400, width: "90%", textAlign: "center", boxShadow: c.cardShadow }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(16,185,129,0.1)", border: "2px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-          <Ic n="check" size={24} color="#10B981" />
-        </div>
-        <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 8 }}>Reminder Shared</div>
-        <div style={{ fontSize: 13, color: c.textDim, marginBottom: 6 }}>{exam.title}</div>
-        <div style={{ fontSize: 12, color: c.textDim, marginBottom: 24 }}>Your class has been notified.</div>
-        <PrimaryBtn onClick={onClose}>Done</PrimaryBtn>
-      </div>
-    </div>
-  );
-
-  if (screen === "preview") return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 480, width: "95%", boxShadow: c.cardShadow }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Preview</div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ padding: "18px 20px", background: c.surface2, borderRadius: 14, border: `1px solid ${c.border}`, marginBottom: 16 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-            <span style={{ fontSize: 18 }}>🎖</span>
-            <span style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text }}>Exam Reminder</span>
-            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#8B5CF6", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>Shared by CR</span>
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 8 }}>{exam.title}</div>
-          {[{ icon: "calendar", val: exam.date }, { icon: "clock", val: exam.time }, { icon: "map", val: `Room ${exam.room}` }].map(f => (
-            <div key={f.val} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 4 }}>
-              <Ic n={f.icon} size={12} color={c.textDim} />
-              <span style={{ fontSize: 12, color: c.textMuted, fontWeight: 600 }}>{f.val}</span>
-            </div>
-          ))}
-          {msg && <div style={{ fontSize: 12, color: c.textMuted, fontStyle: "italic", marginTop: 8, padding: "8px 10px", background: c.surface, borderRadius: 8, border: `1px solid ${c.border}` }}>&quot;{msg}&quot;</div>}
-          <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-            {["CSE", "Batch 52", "Section B"].map(chip => (
-              <span key={chip} style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 600, background: `${c.primary}10`, color: c.primary, border: `1px solid ${c.primary}20` }}>{chip}</span>
-            ))}
-          </div>
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <GhostBtn onClick={() => setScreen("form")}>Back</GhostBtn>
-          <PrimaryBtn icon="megaphone" onClick={() => setScreen("success")}>Publish Reminder</PrimaryBtn>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 500, width: "95%", boxShadow: c.cardShadow, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Share Exam Reminder</div>
-            <div style={{ fontSize: 12, color: c.textDim, marginTop: 2 }}>Notify your class about this exam</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ padding: "12px 14px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}` }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 4 }}>
-              <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)" }}>Official Exam Schedule</span>
-              <span style={{ fontSize: 11, color: c.textDim }}>by {exam.source}</span>
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 6 }}>{exam.title}</div>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              {[{ icon: "calendar", val: exam.date }, { icon: "clock", val: exam.time }, { icon: "map", val: `Room ${exam.room}` }].map(f => (
-                <div key={f.val} style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                  <Ic n={f.icon} size={11} color={c.textDim} />
-                  <span style={{ fontSize: 11, color: c.textDim }}>{f.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 6 }}>Optional Message <span style={{ fontWeight: 400, color: c.textDim }}>(shown to students)</span></div>
-            <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={3} style={ta} placeholder={`"Please arrive at least 15 minutes before the exam."`} />
-          </div>
-          <div style={{ padding: "12px 14px", borderRadius: 12, background: `${c.primary}08`, border: `1px solid ${c.primary}20` }}>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-              <Ic n="shield" size={13} color={c.primary} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: c.primary }}>Target Audience · Automatically Assigned</span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {["CSE", "Batch 52", "Section B"].map(chip => (
-                <span key={chip} style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${c.primary}12`, color: c.primary, border: `1px solid ${c.primary}25` }}>{chip}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <GhostBtn onClick={onClose}>Cancel</GhostBtn>
-            <PrimaryBtn icon="eye" onClick={() => setScreen("preview")}>Preview</PrimaryBtn>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ExamDetailModal({ exam, onClose, onRemind }: { exam: typeof EXAMS_DATA[0]; onClose: () => void; onRemind: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const typeColor: Record<ExamType, string> = { Midterm: "#8B5CF6", Final: "#EF4444", Quiz: "#F59E0B", Viva: "#06B6D4", Practical: "#10B981" };
-  const statusColor: Record<ExamStatus, string> = { "This Week": "#EF4444", Upcoming: "#2563EB", Completed: "#10B981" };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 520, width: "95%", boxShadow: c.cardShadow, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
-              <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)" }}>Official Exam Schedule</span>
-              <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: typeColor[exam.type], background: `${typeColor[exam.type]}10`, border: `1px solid ${typeColor[exam.type]}25` }}>{exam.type}</span>
-              <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: statusColor[exam.status], background: `${statusColor[exam.status]}10`, border: `1px solid ${statusColor[exam.status]}25` }}>{exam.status}</span>
-            </div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 4 }}>{exam.title}</div>
-            <div style={{ fontSize: 13, color: c.textDim }}>{exam.course} · {exam.code}</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginLeft: 12 }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {[
-              { label: "Date", value: exam.date },
-              { label: "Time", value: exam.time },
-              { label: "Room", value: exam.room },
-              { label: "Duration", value: exam.duration },
-              { label: "Source", value: exam.source },
-              { label: "Type", value: exam.type },
-            ].map(f => (
-              <div key={f.label} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{f.label}</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: c.text }}>{f.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ padding: "12px 14px", background: c.surface2, borderRadius: 11, border: `1px solid ${c.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>Instructions</div>
-            <div style={{ fontSize: 13, color: c.text, lineHeight: 1.6 }}>{exam.instructions}</div>
-          </div>
-          {exam.status !== "Completed" && (
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <GhostBtn onClick={onClose}>Close</GhostBtn>
-              <PrimaryBtn icon="megaphone" onClick={() => { onClose(); onRemind(); }}>Share Reminder</PrimaryBtn>
-            </div>
-          )}
-          {exam.status === "Completed" && (
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <GhostBtn onClick={onClose}>Close</GhostBtn>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CRExamsPage() {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const [filter, setFilter] = useState<"All" | "Upcoming" | "This Week" | "This Month" | "Completed">("All");
-  const [search, setSearch] = useState("");
-  const [reminderFor, setReminderFor] = useState<typeof EXAMS_DATA[0] | null>(null);
-  const [detailFor, setDetailFor] = useState<typeof EXAMS_DATA[0] | null>(null);
-
-  const typeColor: Record<ExamType, string> = { Midterm: "#8B5CF6", Final: "#EF4444", Quiz: "#F59E0B", Viva: "#06B6D4", Practical: "#10B981" };
-  const statusColor: Record<ExamStatus, string> = { "This Week": "#EF4444", Upcoming: "#2563EB", Completed: "#10B981" };
-  const statusBg: Record<ExamStatus, string> = { "This Week": "rgba(239,68,68,0.08)", Upcoming: "rgba(37,99,235,0.08)", Completed: "rgba(16,185,129,0.08)" };
-
-  const filters = ["All", "Upcoming", "This Week", "This Month", "Completed"] as const;
-
-  const visible = EXAMS_DATA.filter(e => {
-    const matchF = filter === "All" || (filter === "This Month" ? e.status !== "Completed" : e.status === filter);
-    const matchS = !search || e.title.toLowerCase().includes(search.toLowerCase()) || e.course.toLowerCase().includes(search.toLowerCase()) || e.code.toLowerCase().includes(search.toLowerCase()) || e.type.toLowerCase().includes(search.toLowerCase());
-    return matchF && matchS;
-  });
-
-  const upcoming = EXAMS_DATA.filter(e => e.status !== "Completed");
-  const thisWeek = EXAMS_DATA.filter(e => e.status === "This Week");
-  const completed = EXAMS_DATA.filter(e => e.status === "Completed");
-  const nextExam = upcoming[0];
-  const timeline = upcoming.slice(0, 4);
-
-  const summaryStats = [
-    { label: "Upcoming Exams", value: String(upcoming.length), icon: "🎖", color: c.primary, bg: `rgba(37,99,235,0.1)` },
-    { label: "Next Exam", value: nextExam ? nextExam.date : "—", icon: "📅", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
-    { label: "This Month", value: String(upcoming.length), icon: "📋", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
-    { label: "Completed", value: String(completed.length), icon: "✅", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
-  ];
-
-  return (
-    <>
-      {reminderFor && <ShareExamReminderModal exam={reminderFor} onClose={() => setReminderFor(null)} />}
-      {detailFor && <ExamDetailModal exam={detailFor} onClose={() => setDetailFor(null)} onRemind={() => setReminderFor(detailFor)} />}
-
-      <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 80px", background: c.bg }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-            <div>
-              <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color: c.text, letterSpacing: "-0.02em", marginBottom: 4 }}>Exams</h1>
-              <p style={{ fontSize: 13, color: c.textMuted }}>Stay updated with upcoming examinations and help your class stay informed.</p>
-              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                {["CSE", "Batch 52", "Section B"].map(chip => (
-                  <span key={chip} style={{ padding: "3px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${c.primary}10`, color: c.primary, border: `1px solid ${c.primary}22` }}>{chip}</span>
-                ))}
-              </div>
-            </div>
-            <PrimaryBtn icon="megaphone" onClick={() => setReminderFor(EXAMS_DATA[0])}>Share Exam Reminder</PrimaryBtn>
-          </div>
-
-          {/* Summary cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-            {summaryStats.map(s => (
-              <div key={s.label} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, padding: "14px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{s.icon}</div>
-                <div>
-                  <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 22, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 12, fontWeight: 600, color: c.text, marginTop: 2 }}>{s.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Main 2-col */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "flex-start" }}>
-
-            {/* Left: search + filters + list */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-              {/* Search + filter bar */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 20px", boxShadow: c.cardShadow }}>
-                <div style={{ position: "relative", marginBottom: 12 }}>
-                  <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}>
-                    <Ic n="search" size={14} color={c.textDim} />
-                  </div>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search exams..." style={{ width: "100%", padding: "9px 12px 9px 34px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.surface2, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box" }} />
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {filters.map(f => (
-                    <button key={f} onClick={() => setFilter(f)}
-                      style={{ padding: "5px 14px", borderRadius: 999, fontSize: 12, fontWeight: filter === f ? 700 : 500, background: filter === f ? `${c.primary}12` : "transparent", color: filter === f ? c.primary : c.textDim, border: `1px solid ${filter === f ? c.primary + "30" : c.border}`, cursor: "pointer", transition: "all 0.14s" }}>
-                      {f === "All" ? "All Exams" : f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Exam cards */}
-              {visible.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 0", color: c.textDim, background: c.surface, borderRadius: 16, border: `1px solid ${c.border}` }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>🎖</div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>No exams found</div>
-                </div>
-              ) : visible.map(e => (
-                <div key={e.id} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: c.cardShadow }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
-                        <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#2563EB", background: "rgba(37,99,235,0.08)", border: "1px solid rgba(37,99,235,0.2)" }}>Official Exam Schedule</span>
-                        <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: typeColor[e.type], background: `${typeColor[e.type]}10`, border: `1px solid ${typeColor[e.type]}25` }}>{e.type}</span>
-                        <span style={{ fontSize: 11, color: c.textDim }}>by {e.source}</span>
-                      </div>
-                      <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 3 }}>{e.title}</div>
-                      <div style={{ fontSize: 12, color: c.textDim }}>{e.course} · {e.code}</div>
-                    </div>
-                    <span style={{ padding: "3px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: statusColor[e.status], background: statusBg[e.status], border: `1px solid ${statusColor[e.status]}25`, flexShrink: 0 }}>{e.status}</span>
-                  </div>
-                  <div style={{ display: "flex", gap: 14, padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}`, marginBottom: 12, flexWrap: "wrap" }}>
-                    {[{ icon: "calendar", val: e.date }, { icon: "clock", val: e.time }, { icon: "map", val: `Room ${e.room}` }, { icon: "clock", val: e.duration }].map((f, i) => (
-                      <div key={i} style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                        <Ic n={f.icon} size={12} color={e.status === "This Week" && f.icon === "calendar" ? "#EF4444" : c.textDim} />
-                        <span style={{ fontSize: 12, fontWeight: 600, color: e.status === "This Week" && f.icon === "calendar" ? "#EF4444" : c.text }}>{f.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <GhostBtn small icon="eye" onClick={() => setDetailFor(e)}>View Details</GhostBtn>
-                    {e.status !== "Completed" && (
-                      <PrimaryBtn small icon="megaphone" onClick={() => setReminderFor(e)}>Share Reminder</PrimaryBtn>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Right: timeline + activity */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* Exam Timeline */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
-                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 14 }}>Exam Timeline</div>
-                <div style={{ position: "relative" }}>
-                  <div style={{ position: "absolute", left: 15, top: 8, bottom: 8, width: 1, background: c.border }} />
-                  {timeline.map((e, i) => (
-                    <div key={e.id} style={{ display: "flex", gap: 12, marginBottom: 18 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: "50%", background: i === 0 ? "rgba(239,68,68,0.1)" : `${c.primary}10`, border: `2px solid ${i === 0 ? "#EF4444" : c.primary}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, zIndex: 1, fontSize: 12 }}>
-                        🎖
-                      </div>
-                      <div style={{ flex: 1, paddingTop: 3 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? "#EF4444" : c.textMuted, marginBottom: 1 }}>{e.date}</div>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: c.text, marginBottom: 1 }}>{e.title}</div>
-                        <div style={{ fontSize: 10, color: c.textDim }}>{e.time.split("–")[0].trim()} · Room {e.room}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Exam Activity */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
-                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 14 }}>Recent Exam Activity</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {EXAM_ACTIVITY.map((a, i) => (
-                    <div key={i} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: c.primary, marginBottom: 2 }}>{a.verb}:</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: c.text }}>{a.detail}</div>
-                      <div style={{ fontSize: 10, color: c.textDim, marginTop: 3 }}>{a.time}</div>
-                    </div>
-                  ))}
-                </div>
-                <button style={{ fontSize: 12, fontWeight: 600, color: c.primary, background: "none", border: "none", cursor: "pointer", marginTop: 12, padding: 0 }}>View Activity History →</button>
-              </div>
-
-              {/* Source legend */}
-              <div style={{ padding: "14px 16px", background: `${c.primary}06`, border: `1px solid ${c.primary}18`, borderRadius: 12 }}>
-                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 12, color: c.text, marginBottom: 8 }}>Exam Information Sources</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  {[
-                    { label: "Official Exam Schedule", color: "#2563EB", desc: "Published by University / Dept" },
-                    { label: "Reminder Shared by CR", color: "#8B5CF6", desc: "Shared by you" },
-                  ].map(src => (
-                    <div key={src.label} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: src.color, background: `${src.color}10`, border: `1px solid ${src.color}22`, whiteSpace: "nowrap" }}>{src.label}</span>
-                      <span style={{ fontSize: 11, color: c.textDim }}>{src.desc}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 // ─── CR EVENTS PAGE ───────────────────────────────────────────────────────────────
 
@@ -2033,213 +1540,6 @@ function CREventsPage() {
   );
 }
 
-// ─── CR NOTIFICATIONS PAGE ────────────────────────────────────────────────────────
-
-type NotifCategory = "Class" | "Routine" | "Events" | "Assignments" | "Exams" | "System";
-type NotifGroup = "Today" | "Yesterday" | "Earlier";
-
-interface CRNotif {
-  id: string;
-  icon: string;
-  title: string;
-  desc: string;
-  source: string;
-  time: string;
-  group: NotifGroup;
-  category: NotifCategory;
-  unread: boolean;
-  actionRequired?: boolean;
-  actions?: { label: string; primary?: boolean }[];
-  successColor?: string;
-}
-
-const NOTIFS: CRNotif[] = [
-  { id: "n1", icon: "⚠️", title: "CSE 305 Class Update", desc: "Today's Database Management class has been delayed to 11:00 AM.", source: "CR Activity", time: "10 min ago", group: "Today", category: "Class", unread: true, actions: [{ label: "View Update", primary: true }] },
-  { id: "n2", icon: "📢", title: "Department Notice", desc: "The CSE department has published an updated examination schedule.", source: "Department", time: "2 hours ago", group: "Today", category: "Exams", unread: true, actions: [{ label: "View Notice", primary: true }] },
-  { id: "n3", icon: "✅", title: "Event Approved", desc: "AI & Machine Learning Workshop has been approved and added to Global Events.", source: "System", time: "3 hours ago", group: "Today", category: "Events", unread: true, actions: [{ label: "View Event", primary: true }], successColor: "#10B981" },
-  { id: "n4", icon: "❗", title: "Event Submission Needs Attention", desc: "AI & Machine Learning Workshop was not approved. Reason: Event information could not be verified.", source: "System", time: "4 hours ago", group: "Today", category: "Events", unread: true, actionRequired: true, actions: [{ label: "View Reason" }, { label: "Edit Submission", primary: true }] },
-  { id: "n5", icon: "📚", title: "Class Note Approved", desc: "Database Design Notes are now available to your class.", source: "System", time: "5 hours ago", group: "Today", category: "Class", unread: true, actions: [{ label: "View Material", primary: true }], successColor: "#10B981" },
-  { id: "n6", icon: "📢", title: "Event Shared Successfully", desc: "Hackathon 2026 was shared with CSE · Batch 52 · Section B. 42 students notified.", source: "CR Activity", time: "Yesterday", group: "Yesterday", category: "Events", unread: false, actions: [{ label: "View Event", primary: true }] },
-  { id: "n7", icon: "📝", title: "Assignment Reminder Sent", desc: "Database Assignment 02 reminder was sent to your section. 42 students notified.", source: "CR Activity", time: "Yesterday", group: "Yesterday", category: "Assignments", unread: false, actions: [{ label: "View Assignment", primary: true }] },
-  { id: "n8", icon: "🎓", title: "Exam Reminder Sent", desc: "Midterm Examination reminder was sent to your section. 42 students notified.", source: "CR Activity", time: "Yesterday", group: "Yesterday", category: "Exams", unread: false, actions: [{ label: "View Exam", primary: true }] },
-  { id: "n9", icon: "❗", title: "Class Note Needs Attention", desc: "Physics Lab Notes could not be approved. Please review the reason and resubmit.", source: "System", time: "Yesterday", group: "Yesterday", category: "Class", unread: false, actionRequired: true, actions: [{ label: "View Reason" }, { label: "Resubmit", primary: true }] },
-  { id: "n10", icon: "📅", title: "Routine Updated", desc: "Your CSE 305 class schedule has been updated. Sunday: 10:00 AM → 11:00 AM.", source: "Department", time: "Yesterday", group: "Yesterday", category: "Routine", unread: false, actions: [{ label: "View Routine", primary: true }] },
-  { id: "n11", icon: "🎓", title: "Event Submitted", desc: "AI & Machine Learning Workshop has been submitted for review. Status: Pending Review.", source: "CR Activity", time: "3 days ago", group: "Earlier", category: "Events", unread: false, actions: [{ label: "View Submission", primary: true }] },
-  { id: "n12", icon: "📢", title: "University Notice", desc: "New academic calendar has been published by the university.", source: "University", time: "3 days ago", group: "Earlier", category: "System", unread: false, actions: [{ label: "View Notice", primary: true }] },
-];
-
-const NOTIF_FILTERS = ["All", "Unread", "Action Required", "Class", "Routine", "Events", "Assignments", "Exams", "System"] as const;
-
-function CRNotificationsPage() {
-  const { theme } = useTheme();
-  const c = tok(theme);
-
-  const [filter, setFilter] = useState<typeof NOTIF_FILTERS[number]>("All");
-  const [readIds, setReadIds] = useState<Set<string>>(new Set(NOTIFS.filter(n => !n.unread).map(n => n.id)));
-  const [allReadToast, setAllReadToast] = useState(false);
-
-  const isRead = (id: string) => readIds.has(id);
-  const markRead = (id: string) => setReadIds(p => new Set([...p, id]));
-  const markAllRead = () => {
-    setReadIds(new Set(NOTIFS.map(n => n.id)));
-    setAllReadToast(true);
-    setTimeout(() => setAllReadToast(false), 3000);
-  };
-
-  const unreadCount = NOTIFS.filter(n => !isRead(n.id)).length;
-  const actionCount = NOTIFS.filter(n => n.actionRequired).length;
-  const totalCount = NOTIFS.length;
-
-  const visible = NOTIFS.filter(n => {
-    if (filter === "Unread") return !isRead(n.id);
-    if (filter === "Action Required") return !!n.actionRequired;
-    if (filter === "All") return true;
-    return n.category === filter;
-  });
-
-  const groups: NotifGroup[] = ["Today", "Yesterday", "Earlier"];
-
-  const sourceColor: Record<string, string> = {
-    "CR Activity": "#8B5CF6", "Department": "#2563EB", "University": "#2563EB",
-    "Teacher": "#06B6D4", "Club": "#10B981", "System": "#6B7280",
-  };
-
-  return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 80px", background: c.bg }}>
-      {/* Toast */}
-      {allReadToast && (
-        <div style={{ position: "fixed", bottom: 28, left: "50%", transform: "translateX(-50%)", padding: "10px 20px", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 12, boxShadow: c.cardShadow, fontSize: 13, fontWeight: 600, color: c.text, zIndex: 900, whiteSpace: "nowrap" }}>
-          ✓ All notifications marked as read.
-        </div>
-      )}
-
-      <div style={{ maxWidth: 860, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
-          <div>
-            <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color: c.text, letterSpacing: "-0.02em", marginBottom: 4 }}>Notifications</h1>
-            <p style={{ fontSize: 13, color: c.textMuted }}>Stay updated on your class coordination and important activities.</p>
-          </div>
-          <button onClick={markAllRead}
-            style={{ padding: "8px 16px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.surface, color: c.textMuted, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "Inter", whiteSpace: "nowrap" }}>
-            Mark all as read
-          </button>
-        </div>
-
-        {/* Summary row */}
-        <div style={{ display: "flex", gap: 10, padding: "14px 18px", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, boxShadow: c.cardShadow }}>
-          {[
-            { label: "All", value: totalCount, color: c.textDim, active: filter === "All" },
-            { label: "Unread", value: unreadCount, color: c.primary, active: filter === "Unread" },
-            { label: "Action Required", value: actionCount, color: "#EF4444", active: filter === "Action Required" },
-          ].map(s => (
-            <button key={s.label} onClick={() => setFilter(s.label as typeof NOTIF_FILTERS[number])}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, border: `1px solid ${s.active ? s.color + "40" : c.border}`, background: s.active ? `${s.color}08` : "transparent", cursor: "pointer", transition: "all 0.14s" }}>
-              <span style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: s.color, lineHeight: 1 }}>{s.value}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: s.active ? s.color : c.textDim }}>{s.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Category filter strip */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {NOTIF_FILTERS.map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              style={{ padding: "5px 13px", borderRadius: 999, fontSize: 12, fontWeight: filter === f ? 700 : 500, background: filter === f ? `${c.primary}12` : c.surface, color: filter === f ? c.primary : c.textDim, border: `1px solid ${filter === f ? c.primary + "30" : c.border}`, cursor: "pointer", transition: "all 0.12s" }}>
-              {f}
-            </button>
-          ))}
-        </div>
-
-        {/* Empty state */}
-        {visible.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18 }}>
-            <div style={{ fontSize: 36, marginBottom: 12 }}>🔔</div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 16, color: c.text, marginBottom: 6 }}>
-              {filter === "Unread" ? "You're all caught up." : filter === "Action Required" ? "No actions required." : "No notifications."}
-            </div>
-            <div style={{ fontSize: 13, color: c.textDim }}>
-              {filter === "Unread" ? "You don't have any unread notifications." : filter === "Action Required" ? "No actions are currently required." : "Nothing here yet."}
-            </div>
-          </div>
-        )}
-
-        {/* Grouped notification list */}
-        {groups.map(group => {
-          const items = visible.filter(n => n.group === group);
-          if (!items.length) return null;
-          return (
-            <div key={group}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}>{group}</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {items.map(n => {
-                  const read = isRead(n.id);
-                  const accentColor = n.actionRequired ? "#EF4444" : (n.successColor ?? c.primary);
-                  return (
-                    <div key={n.id}
-                      onClick={() => markRead(n.id)}
-                      style={{ position: "relative", background: read ? c.surface : (theme === "dark" ? "rgba(37,99,235,0.05)" : "rgba(37,99,235,0.03)"), border: `1px solid ${n.actionRequired ? "rgba(239,68,68,0.2)" : read ? c.border : `${c.primary}20`}`, borderRadius: 14, padding: "14px 16px 14px 20px", cursor: "pointer", transition: "background 0.12s" }}>
-
-                      {/* Unread dot */}
-                      {!read && (
-                        <div style={{ position: "absolute", left: 7, top: "50%", transform: "translateY(-50%)", width: 7, height: 7, borderRadius: "50%", background: c.primary }} />
-                      )}
-
-                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        {/* Icon */}
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${accentColor}10`, border: `1px solid ${accentColor}20`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>
-                          {n.icon}
-                        </div>
-
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 3 }}>
-                            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                              <span style={{ fontFamily: "Manrope", fontWeight: read ? 600 : 800, fontSize: 13, color: read ? c.textMuted : c.text }}>{n.title}</span>
-                              {n.actionRequired && (
-                                <span style={{ padding: "1px 7px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#EF4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>Action Required</span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: 11, color: c.textDim, whiteSpace: "nowrap", flexShrink: 0 }}>{n.time}</span>
-                          </div>
-
-                          <div style={{ fontSize: 12, color: read ? c.textDim : c.textMuted, lineHeight: 1.5, marginBottom: 8 }}>{n.desc}</div>
-
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-                            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 600, color: sourceColor[n.source] ?? c.textDim, background: `${sourceColor[n.source] ?? c.textDim}10`, border: `1px solid ${sourceColor[n.source] ?? c.textDim}20` }}>
-                              {n.source}
-                            </span>
-                            {n.actions && (
-                              <div style={{ display: "flex", gap: 7 }} onClick={e => e.stopPropagation()}>
-                                {n.actions.map(a => (
-                                  <button key={a.label}
-                                    style={{
-                                      padding: "4px 11px", borderRadius: 8, fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all 0.12s",
-                                      background: a.primary ? `${accentColor}12` : "transparent",
-                                      color: a.primary ? accentColor : c.textDim,
-                                      border: `1px solid ${a.primary ? accentColor + "30" : c.border}`
-                                    }}>
-                                    {a.label}
-                                  </button>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-
-      </div>
-    </div>
-  );
-}
-
 // ─── CR PORTAL ROOT ───────────────────────────────────────────────────────────────
 export default function CRPortal({ onBack }: { onBack?: () => void } = {}) {
   const router = useRouter();
@@ -2259,9 +1559,10 @@ export default function CRPortal({ onBack }: { onBack?: () => void } = {}) {
     if (activeNav === "routine") return <RoutineView />;
     if (activeNav === "classupdates") return <CRClassUpdatesPage />;
     if (activeNav === "assignments") return <CRAssignmentsPage />;
-    if (activeNav === "exams") return <CRExamsPage />;
+    if (activeNav === "announcements") return <AnnouncementsView />;
+    if (activeNav === "exams") return <ExamsView />;
     if (activeNav === "events") return <CREventsPage />;
-    if (activeNav === "notifications") return <CRNotificationsPage />;
+    if (activeNav === "notifications") return <NotificationsPage onNavigate={id => handleSetActive(id === "class-updates" ? "classupdates" : id)} />;
     return <CRDashboardHome onNavigate={handleSetActive} />;
   };
 
@@ -2288,7 +1589,7 @@ export default function CRPortal({ onBack }: { onBack?: () => void } = {}) {
 
         {/* Main */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, minWidth: 0 }}>
-          <CRHeader onMenuClick={() => setMobSidebar(true)} onBack={goToStudentPortal} />
+          <CRHeader onNotifications={() => setActiveNav("notifications")} onMenuClick={() => setMobSidebar(true)} onBack={goToStudentPortal} />
           {renderMain()}
         </div>
       </div>

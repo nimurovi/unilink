@@ -1,0 +1,23 @@
+CREATE TABLE IF NOT EXISTS class_exams (
+ id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ class_id INT UNSIGNED NOT NULL,
+ author_id INT UNSIGNED NOT NULL,
+ title VARCHAR(200) NOT NULL,
+ course VARCHAR(150) NOT NULL,
+ code VARCHAR(50) NOT NULL,
+ instructor VARCHAR(150) NOT NULL,
+ room VARCHAR(100) NOT NULL,
+ exam_date DATE NOT NULL,
+ start_time TIME NOT NULL,
+ end_time TIME NOT NULL,
+ kind VARCHAR(20) NOT NULL,
+ syllabus TEXT NOT NULL,
+ instructions TEXT NOT NULL,
+ cancelled TINYINT(1) NOT NULL DEFAULT 0,
+ version INT UNSIGNED NOT NULL DEFAULT 1,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ KEY exams_class_date (class_id,exam_date,start_time),
+ CONSTRAINT fk_exams_class FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE RESTRICT,
+ CONSTRAINT fk_exams_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
