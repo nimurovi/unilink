@@ -1,4 +1,12 @@
 "use client";
+import ClubsView from '@/components/ui/ClubsView';
+import OpportunitiesView from '@/components/ui/OpportunitiesView';
+import DirectoryView from '@/components/ui/DirectoryView';
+import AccountView from '@/components/ui/AccountView';
+import {useAccount} from '@/lib/account';
+import {accountClass,accountInitial} from '@/lib/account-types';
+import EventsView,{EventEditor,UpcomingEvents,useEventClock} from '@/components/ui/EventsView';
+import {useEvent} from '@/lib/events';
 import NotificationsPage from "@/app/notifications/NotificationsView";
 import {useNotifications} from "@/lib/notifications";
 import AnnouncementsView,{AnnouncementEditor,AnnouncementsFeed} from "@/components/ui/AnnouncementsView";
@@ -11,7 +19,6 @@ import MaterialUpload from "@/components/ui/MaterialUpload";
 import { useMaterials } from "@/lib/materials";
 import MaterialsPage from "@/app/materials/page";
 import { useState, useRef, useEffect, useContext } from "react";
-import { useRouter } from "next/navigation";
 import { useClassUpdates, useClassUpdatesState, postClassUpdate, editClassUpdate, deleteClassUpdate } from "@/lib/class-updates";
 import { ThemeCtx } from "@/components/ui/Theme";
 
@@ -95,7 +102,8 @@ const CR_NAV: NavGroup[] = [
   { group: "OVERVIEW", items: [{ id: "dashboard", label: "Dashboard", icon: "home" }, { id: "notifications", label: "Notifications", icon: "bell" }] },
   { group: "ACADEMIC", items: [{ id: "routine", label: "Routine", icon: "calendar" }, { id: "materials", label: "Class Materials", icon: "folder" }, { id: "assignments", label: "Assignments", icon: "clipboard" }, { id: "exams", label: "Exams", icon: "award" }] },
   { group: "CLASS MANAGEMENT", items: [{ id: "classupdates", label: "Class Updates", icon: "alert" }, { id: "announcements", label: "Announcements", icon: "megaphone" }] },
-  { group: "CAMPUS", items: [{ id: "events", label: "Events", icon: "event" }] },
+  { group: "ACCOUNT", items: [{ id: "profile", label: "My Profile", icon: "user" }, { id: "settings", label: "Account Settings", icon: "settings" }] },
+  { group: "CAMPUS", items: [{ id: "clubs", label: "Clubs & Communities", icon: "user" }, { id: "opportunities", label: "Opportunities", icon: "event" }, { id: "directory", label: "Class Directory", icon: "user" }, { id: "events", label: "Events", icon: "event" }] },
 ];
 
 // ─── REUSABLE BUTTONS ─────────────────────────────────────────────────────────────
@@ -142,6 +150,7 @@ function StatusBadge({ status }: { status: Status }) {
 function CRSidebar({ active, setActive, onClose }: { active: string; setActive: (id: string) => void; onClose?: () => void }) {
   const { theme } = useTheme();
   const c = tok(theme);
+  const {account}=useAccount();
   const unread=useNotifications().entries.filter(e=>e.unread).length;
   return (
     <div style={{ width: 236, height: "100%", background: c.sidebar, borderRight: `1px solid ${c.border}`, display: "flex", flexDirection: "column", overflowY: "auto" }}>
@@ -193,10 +202,10 @@ function CRSidebar({ active, setActive, onClose }: { active: string; setActive: 
 
       {/* CR profile */}
       <div style={{ padding: "14px 16px", borderTop: `1px solid ${c.border}`, display: "flex", gap: 10, alignItems: "center" }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, #38BDF8)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "Manrope" }}>O</div>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, #38BDF8)`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 15, fontWeight: 700, color: "#fff", fontFamily: "Manrope" }}>{accountInitial(account)}</div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Ovi</div>
-          <div style={{ fontSize: 11, color: c.textDim }}>CR · CSE 52-B</div>
+          <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{account?.fullName||'Account'}</div>
+          <div style={{ fontSize: 11, color: c.textDim }}>{account?.role==='admin'?'Admin':'CR'} · {accountClass(account)}</div>
         </div>
         <Ic n="shield" size={14} color={c.primary} />
       </div>
@@ -208,6 +217,7 @@ function CRSidebar({ active, setActive, onClose }: { active: string; setActive: 
 function CRHeader({ onMenuClick, onBack, onNotifications }: { onMenuClick: () => void; onBack: () => void; onNotifications: () => void }) {
   const { theme, toggle } = useTheme();
   const c = tok(theme);
+  const {account}=useAccount();
   const unread=useNotifications().entries.filter(e=>e.unread).length;
   const [searchOpen, setSearchOpen] = useState(false);
   const hour = new Date().getHours();
@@ -222,7 +232,7 @@ function CRHeader({ onMenuClick, onBack, onNotifications }: { onMenuClick: () =>
 
       {/* Greeting */}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{greeting}, Ovi 👋</div>
+        <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{greeting}, {account?.fullName||'there'} 👋</div>
         <div style={{ fontSize: 11, color: c.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Manage academic information and updates for your section.</div>
       </div>
 
@@ -258,11 +268,11 @@ function CRHeader({ onMenuClick, onBack, onNotifications }: { onMenuClick: () =>
       </button>
 
       {/* Avatar */}
-      <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, #38BDF8)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: "#fff", cursor: "pointer" }}>O</div>
+      <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, #38BDF8)`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: "#fff", cursor: "pointer" }}>{accountInitial(account)}</div>
 
-      {/* Back to student portal */}
+      {/* Return to CR dashboard */}
       <button onClick={onBack} style={{ background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 9, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: c.textMuted, cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontFamily: "Inter", whiteSpace: "nowrap" }}>
-        ← Student Portal
+        CR Dashboard
       </button>
     </div>
   );
@@ -353,30 +363,14 @@ function UpdateRoutineModal({onClose}:{onClose:()=>void}){return <RoutineEditor 
 function AddExamModal({onClose}:{onClose:()=>void}){return <ExamEditor onClose={onClose}/>;}
 
 // Create Event Modal
-function CreateEventModal({ onClose }: { onClose: () => void }) {
-  return (
-    <Modal title="Create Event" onClose={onClose}>
-      <FormField label="Event Title"><FieldInput placeholder="e.g. AI Workshop" /></FormField>
-      <FormField label="Description"><FieldTextarea placeholder="Event details…" rows={3} /></FormField>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <FormField label="Date"><FieldInput type="date" /></FormField>
-        <FormField label="Time"><FieldInput type="time" /></FormField>
-        <FormField label="Venue"><FieldInput placeholder="CSE Auditorium" /></FormField>
-        <FormField label="Organizer"><FieldInput placeholder="CSE 52-B" /></FormField>
-      </div>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", paddingTop: 8 }}>
-        <GhostBtn onClick={onClose}>Save Draft</GhostBtn>
-        <PrimaryBtn icon="event" onClick={onClose}>Publish Event</PrimaryBtn>
-      </div>
-    </Modal>
-  );
-}
+function CreateEventModal({onClose}:{onClose:()=>void}){return <EventEditor onClose={onClose}/>;}
 
 // ─── CR DASHBOARD HOME ────────────────────────────────────────────────────────────
 
 type UpdateType = "Class Delayed" | "Class Cancelled" | "Room Changed" | "Extra Class" | "Schedule Changed" | "General Class Information";
 
 function PostClassUpdateModal({ onClose }: { onClose: () => void }) {
+  const {account}=useAccount();
   const { theme } = useTheme();
   const c = tok(theme);
   const [updateType, setUpdateType] = useState<UpdateType>("Class Delayed");
@@ -514,7 +508,7 @@ function PostClassUpdateModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {error && <p role="alert" style={{ color: "#EF4444" }}>{error}</p>}
-          <p style={{ fontSize: 12, color: c.textMuted }}>Demo: saves in this browser only. Other users will not receive this update yet.</p>
+          <p style={{ fontSize: 12, color: c.textMuted }}>Published updates are shared with students in your registered class.</p>
           {/* Locked audience */}
           <div style={{ padding: "12px 14px", borderRadius: 12, background: `${c.primary}08`, border: `1px solid ${c.primary}20` }}>
             <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
@@ -522,7 +516,7 @@ function PostClassUpdateModal({ onClose }: { onClose: () => void }) {
               <span style={{ fontSize: 12, fontWeight: 700, color: c.primary }}>Target Audience · Automatically Assigned</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              {["CSE", "Batch 52", "Section B"].map(chip => (
+              {(account?[account.department,account.batch,account.section]:[]).map(chip => (
                 <span key={chip} style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${c.primary}12`, color: c.primary, border: `1px solid ${c.primary}25` }}>{chip}</span>
               ))}
             </div>
@@ -538,66 +532,8 @@ function PostClassUpdateModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function ShareEventModal({ eventTitle, onClose }: { eventTitle: string; onClose: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const [msg, setMsg] = useState("");
-  const [done, setDone] = useState(false);
-
-  const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.surface2, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box", resize: "vertical" };
-
-  if (done) return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "40px 36px", maxWidth: 380, width: "90%", textAlign: "center", boxShadow: c.cardShadow }}>
-        <div style={{ fontSize: 36, marginBottom: 14 }}>🎉</div>
-        <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 8 }}>Event Shared!</div>
-        <div style={{ fontSize: 13, color: c.textDim, marginBottom: 20 }}><strong>{eventTitle}</strong> has been shared with your section.</div>
-        <div style={{ fontSize: 11, color: c.textDim, marginBottom: 24 }}>Students will see &quot;Shared by CR&quot; on this event in their dashboard.</div>
-        <button onClick={onClose} style={{ padding: "9px 28px", borderRadius: 10, background: c.primary, color: "#fff", border: "none", cursor: "pointer", fontWeight: 600, fontSize: 13 }}>Done</button>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 460, width: "95%", boxShadow: c.cardShadow }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Share with Section</div>
-            <div style={{ fontSize: 12, color: c.textDim, marginTop: 2 }}>{eventTitle}</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 6 }}>Optional Message</div>
-            <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={3} style={inp} placeholder="e.g. Registration is now open. Interested students can register before Sep 10." />
-          </div>
-          <div style={{ padding: "11px 14px", borderRadius: 11, background: `${c.primary}08`, border: `1px solid ${c.primary}20` }}>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 5 }}>
-              <Ic n="shield" size={13} color={c.primary} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: c.primary }}>Sharing to your Assigned Section</span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {["CSE", "Batch 52", "Section B"].map(chip => (
-                <span key={chip} style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${c.primary}12`, color: c.primary, border: `1px solid ${c.primary}25` }}>{chip}</span>
-              ))}
-            </div>
-            <div style={{ fontSize: 11, color: c.textDim, marginTop: 6 }}>Students will see this as &quot;Shared by CR&quot; in their events feed.</div>
-          </div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <GhostBtn onClick={onClose}>Cancel</GhostBtn>
-            <PrimaryBtn icon="event" onClick={() => setDone(true)}>Share Event</PrimaryBtn>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
+  const {account}=useAccount();
   const routine=useRoutine(),routineClock=useRoutineClock();
   const allClassUpdates = useClassUpdates();
   const materialData = useMaterials();
@@ -606,32 +542,26 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
   const { theme } = useTheme();
   const c = tok(theme);
   const [modal, setModal] = useState<string | null>(null);
-  const [shareEventTitle, setShareEventTitle] = useState("");
+  const eventData=useEvent(),eventClock=useEventClock();
 
   const quickActions = [
     { label: "Post Class Update", icon: "alert", modal: "postUpdate", primary: true },
     { label: "Add Weekly Class", icon: "calendar", modal: "routine" },
     { label: "Upload Class Note", icon: "upload", modal: "material" },
-    { label: "Share Event", icon: "event", modal: "shareEventPick" },
+    { label: "Create Event", icon: "event", modal: "event" },
     { label: "Announcement", icon: "megaphone", modal: "announcement" },
   ];
 
   const stats = [
     { label: "Today's Classes", value: routine.loading||routine.error||!routineClock?"—":String(routine.entries.filter(e=>e.weekday===routineClock.day).length), sub: "Scheduled today", icon: "📚", color: c.primary, bg: `rgba(37,99,235,0.1)` },
     { label: "Active Updates", value: String(allClassUpdates.filter(update => update.status === "published").length), sub: "Posted by you", icon: "⚠️", color: "#F59E0B", bg: "rgba(245,158,11,0.1)" },
-    { label: "Upcoming Events", value: "3", sub: "Available to share", icon: "🎪", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
+    { label: "Upcoming Events", value: eventData.loading||eventData.error||eventClock===null?"—":String(eventData.entries.filter(e=>!e.cancelled&&new Date(e.endsAt).getTime()>eventClock).length), sub: "In your class", icon: "🎪", color: "#8B5CF6", bg: "rgba(139,92,246,0.1)" },
     { label: "Materials Shared", value: String(liveMaterials.length), sub: "Class notes shared", icon: "📄", color: "#10B981", bg: "rgba(16,185,129,0.1)" },
     { label: "Material Courses", value: String(new Set(liveMaterials.map(m=>m.code)).size), sub: "Courses with files", icon: "⏳", color: "#64748B", bg: "rgba(100,116,139,0.1)" },
   ];
 
 
   const classUpdates = allClassUpdates.filter(update => update.status === "published");
-
-  const eventsToShare = [
-    { id: "ev1", title: "Hackathon 2026", date: "September 15", venue: "Auditorium", regStatus: "Registration Open", emoji: "🏆" },
-    { id: "ev2", title: "AI Workshop", date: "September 18", venue: "Innovation Lab", regStatus: "Registration Link Available", emoji: "🤖" },
-    { id: "ev3", title: "Career Fair", date: "September 22", venue: "CSE Building", regStatus: "Open for All", emoji: "💼" },
-  ];
 
   const materialStats = [
     {label:"Total Materials",value:liveMaterials.length,desc:"Shared with this class",color:"#2563EB",bg:"rgba(37,99,235,0.08)"},
@@ -641,7 +571,6 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
   ];
 
   const recentActivity = [
-    { verb: "You shared", detail: "Hackathon 2026", time: "20 minutes ago", icon: "event" },
     { verb: "You updated", detail: "CSE 305 Class Time", time: "Yesterday", icon: "calendar" },
     { verb: "You uploaded", detail: "Database Normalization Notes", time: "2 days ago", icon: "upload" },
     { verb: "You posted", detail: "Midterm syllabus announcement", time: "3 days ago", icon: "megaphone" },
@@ -664,7 +593,6 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
       {modal === "routine" && <UpdateRoutineModal onClose={() => setModal(null)} />}
       {modal === "exam" && <AddExamModal onClose={() => setModal(null)} />}
       {modal === "event" && <CreateEventModal onClose={() => setModal(null)} />}
-      {modal === "shareEvent" && <ShareEventModal eventTitle={shareEventTitle} onClose={() => setModal(null)} />}
 
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px 80px", background: c.bg }}>
         <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -678,7 +606,7 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
               <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 15, color: c.text, marginBottom: 4 }}>Class Representative</div>
               <div style={{ fontSize: 12, color: c.textDim, marginBottom: 8 }}>Manage updates and information for your class.</div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {["CSE", "Batch 52", "Section B", "Spring 2026"].map((chip) => (
+                {(account?[account.department,account.batch,account.section]:[]).map((chip) => (
                   <span key={chip} style={{ padding: "3px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${c.primary}10`, color: c.primary, border: `1px solid ${c.primary}22` }}>{chip}</span>
                 ))}
               </div>
@@ -700,7 +628,7 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
                 const hov = hoveredAction === a.label;
                 return (
                   <button key={a.label}
-                    onClick={() => { if (a.modal === "shareEventPick") { setShareEventTitle(eventsToShare[0].title); setModal("shareEvent"); } else setModal(a.modal); }}
+                    onClick={() => setModal(a.modal)}
                     onMouseEnter={() => setHoveredAction(a.label)} onMouseLeave={() => setHoveredAction(null)}
                     style={{
                       display: "flex", flexDirection: "column", alignItems: "center", gap: 8, padding: "16px 8px",
@@ -767,42 +695,7 @@ function CRDashboardHome({ onNavigate }: { onNavigate: (id: string) => void }) {
                 <button onClick={() => onNavigate("classupdates")} style={{ fontSize: 12, fontWeight: 600, color: c.primary, background: "none", border: "none", cursor: "pointer", marginTop: 12, padding: 0 }}>View All Updates →</button>
               </div>
 
-              {/* Events to Share */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <div>
-                    <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text }}>Events to Share</div>
-                    <div style={{ fontSize: 11, color: c.textDim, marginTop: 2 }}>Share relevant events with your section</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {eventsToShare.map((ev) => (
-                    <div key={ev.id} style={{ padding: "14px 16px", background: c.surface2, borderRadius: 13, border: `1px solid ${c.border}` }}>
-                      <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: `${c.primary}10`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>{ev.emoji}</div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 3 }}>{ev.title}</div>
-                          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                              <Ic n="calendar" size={11} color={c.textDim} />
-                              <span style={{ fontSize: 11, color: c.textDim }}>{ev.date}</span>
-                            </div>
-                            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                              <Ic n="map" size={11} color={c.textDim} />
-                              <span style={{ fontSize: 11, color: c.textDim }}>{ev.venue}</span>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 11, color: "#10B981", fontWeight: 600, marginTop: 4 }}>{ev.regStatus}</div>
-                        </div>
-                        <button onClick={() => { setShareEventTitle(ev.title); setModal("shareEvent"); }}
-                          style={{ padding: "6px 14px", borderRadius: 9, border: `1px solid ${c.primary}30`, background: `${c.primary}08`, color: c.primary, fontSize: 11, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s", flexShrink: 0 }}>
-                          Share with Section
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <UpcomingEvents onView={()=>onNavigate('events')} onAdd={()=>setModal('event')}/>
 
               {/* Class Materials Summary */}
               <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
@@ -983,6 +876,7 @@ function MySectionPage() {
 
 // ─── CR CLASS UPDATES PAGE ────────────────────────────────────────────────────────
 function CRClassUpdatesPage() {
+  const {account}=useAccount();
   const { theme } = useTheme();
   const c = tok(theme);
   const [modal, setModal] = useState<string | null>(null);
@@ -1074,7 +968,7 @@ function CRClassUpdatesPage() {
                     </div>
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: c.textMuted, marginBottom: 4, paddingLeft: 24 }}>{upd.detail}{upd.note && <p style={{ fontWeight: 400, marginBottom: 0 }}>{upd.note}</p>}</div>
-                  <div style={{ fontSize: 11, color: c.textDim, paddingLeft: 24 }}>Published {upd.time} · CSE · Batch 52 · Section B</div>
+                  <div style={{ fontSize: 11, color: c.textDim, paddingLeft: 24 }}>Published {upd.time} · {accountClass(account)}</div>
                 </div>
               ))}
             </div>
@@ -1089,461 +983,9 @@ function CRClassUpdatesPage() {
 
 function CRAssignmentsPage(){return <AssignmentsView/>;}
 
-// ─── CR EVENTS PAGE ───────────────────────────────────────────────────────────────
-
-type EventCategory = "University" | "Department" | "Club" | "External" | "Workshop" | "Competition" | "Seminar" | "Hackathon" | "Career";
-type RegStatus = "Open" | "Closing Soon" | "Closed" | "N/A";
-
-const EVENTS_DATA = [
-  { id: "ev1", title: "AI & Machine Learning Workshop", type: "Workshop" as EventCategory, organizer: "Tech Organization", organizerType: "External Organization", date: "Sep 20", time: "10:00 AM – 4:00 PM", location: "University Auditorium", regStatus: "Open" as RegStatus, regDeadline: "Sep 15", about: "Learn practical AI and Machine Learning concepts through hands-on sessions.", sharedByYou: true, sharedTime: "2 hours ago", source: "Official Event Information" },
-  { id: "ev2", title: "Hackathon 2026", type: "Hackathon" as EventCategory, organizer: "CSE Department", organizerType: "University Department", date: "Sep 15", time: "9:00 AM – 9:00 PM", location: "Computer Lab Block", regStatus: "Open" as RegStatus, regDeadline: "Sep 10", about: "24-hour hackathon open to all CSE students. Build something amazing.", sharedByYou: true, sharedTime: "Yesterday", source: "University" },
-  { id: "ev3", title: "Career Development Seminar", type: "Seminar" as EventCategory, organizer: "Career Club", organizerType: "Student Club", date: "Sep 18", time: "2:00 PM – 5:00 PM", location: "Seminar Hall 3", regStatus: "Open" as RegStatus, regDeadline: "Sep 17", about: "Tips on CV writing, LinkedIn, and interview skills from industry experts.", sharedByYou: false, sharedTime: "", source: "Career Club" },
-  { id: "ev4", title: "Open Source Contribution Drive", type: "Workshop" as EventCategory, organizer: "Developer Society", organizerType: "External Organization", date: "Sep 22", time: "11:00 AM – 3:00 PM", location: "Room 201", regStatus: "Closing Soon" as RegStatus, regDeadline: "Sep 14", about: "Learn to contribute to real open-source projects with guidance from mentors.", sharedByYou: false, sharedTime: "", source: "Developer Society" },
-  { id: "ev5", title: "Annual Sports Fest", type: "University" as EventCategory, organizer: "University Student Union", organizerType: "University", date: "Sep 25", time: "8:00 AM – 6:00 PM", location: "Sports Ground", regStatus: "Open" as RegStatus, regDeadline: "Sep 20", about: "Annual sports competition across all departments.", sharedByYou: false, sharedTime: "", source: "University" },
-  { id: "ev6", title: "Startup Pitch Competition", type: "Competition" as EventCategory, organizer: "Startup Bangladesh", organizerType: "External Organization", date: "Oct 1", time: "10:00 AM – 6:00 PM", location: "Innovation Hub", regStatus: "Closing Soon" as RegStatus, regDeadline: "Sep 18", about: "Pitch your startup idea to industry investors and mentors.", sharedByYou: false, sharedTime: "", source: "Official Organizer" },
-];
-
-const EVENTS_ACTIVITY = [
-  { verb: "You shared", detail: "AI & Machine Learning Workshop", time: "2 hours ago" },
-  { verb: "You shared", detail: "Hackathon 2026", time: "Yesterday" },
-  { verb: "You added", detail: "Career Development Seminar", time: "3 days ago" },
-];
-
-const EVENT_TYPE_COLOR: Record<string, string> = {
-  University: "#2563EB", Department: "#8B5CF6", Club: "#06B6D4", External: "#F59E0B",
-  Workshop: "#10B981", Competition: "#EF4444", Seminar: "#6366F1", Hackathon: "#F97316", Career: "#EC4899",
-};
-
-function ShareEventWithSectionModal({ event, onClose }: { event: typeof EVENTS_DATA[0]; onClose: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const [screen, setScreen] = useState<"form" | "preview" | "success">("form");
-  const [msg, setMsg] = useState("");
-
-  const ta: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.surface2, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box", resize: "vertical" };
-
-  if (screen === "success") return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "44px 36px", maxWidth: 400, width: "90%", textAlign: "center", boxShadow: c.cardShadow }}>
-        <div style={{ fontSize: 40, marginBottom: 16 }}>🎉</div>
-        <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 8 }}>Event Shared Successfully</div>
-        <div style={{ fontSize: 13, color: c.textDim, marginBottom: 6 }}>{event.title}</div>
-        <div style={{ fontSize: 12, color: c.textDim, marginBottom: 24 }}>Your class can now view this event.</div>
-        <PrimaryBtn onClick={onClose}>Done</PrimaryBtn>
-      </div>
-    </div>
-  );
-
-  if (screen === "preview") return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 480, width: "95%", boxShadow: c.cardShadow, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Event Preview</div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ padding: "18px 20px", background: c.surface2, borderRadius: 14, border: `1px solid ${c.border}`, marginBottom: 16 }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 18 }}>🎉</span>
-            <span style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 13, color: c.text }}>New Event Shared</span>
-            <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#8B5CF6", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>Shared by CR</span>
-          </div>
-          <div style={{ fontSize: 14, fontWeight: 700, color: c.text, marginBottom: 4 }}>{event.title}</div>
-          <div style={{ fontSize: 11, color: c.textDim, marginBottom: 8 }}>Organized by: {event.organizer}</div>
-          {[{ icon: "calendar", val: event.date }, { icon: "clock", val: event.time }, { icon: "map", val: event.location }].map(f => (
-            <div key={f.val} style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 3 }}>
-              <Ic n={f.icon} size={11} color={c.textDim} />
-              <span style={{ fontSize: 12, color: c.textMuted }}>{f.val}</span>
-            </div>
-          ))}
-          {msg && <div style={{ fontSize: 12, color: c.textMuted, fontStyle: "italic", marginTop: 10, padding: "8px 10px", background: c.surface, borderRadius: 8, border: `1px solid ${c.border}` }}>&quot;{msg}&quot;</div>}
-          <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
-            {["CSE", "Batch 52", "Section B"].map(chip => (
-              <span key={chip} style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 600, background: `${c.primary}10`, color: c.primary, border: `1px solid ${c.primary}20` }}>{chip}</span>
-            ))}
-          </div>
-        </div>
-        <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", fontSize: 11, color: "#92400E", marginBottom: 16 }}>
-          ℹ️ Students will see this as an external event shared by their CR, not an official university event.
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <GhostBtn onClick={() => setScreen("form")}>Back</GhostBtn>
-          <PrimaryBtn icon="megaphone" onClick={() => setScreen("success")}>Share Event</PrimaryBtn>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 500, width: "95%", boxShadow: c.cardShadow, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Share with Section</div>
-            <div style={{ fontSize: 12, color: c.textDim, marginTop: 2 }}>Share this event with your assigned students</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div style={{ padding: "12px 14px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}` }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-              <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: EVENT_TYPE_COLOR[event.type] ?? c.primary, background: `${EVENT_TYPE_COLOR[event.type] ?? c.primary}10`, border: `1px solid ${EVENT_TYPE_COLOR[event.type] ?? c.primary}25` }}>{event.type}</span>
-              <span style={{ fontSize: 11, color: c.textDim }}>by {event.organizer}</span>
-            </div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 6 }}>{event.title}</div>
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              {[{ icon: "calendar", val: event.date }, { icon: "clock", val: event.time }, { icon: "map", val: event.location }].map(f => (
-                <div key={f.val} style={{ display: "flex", gap: 4, alignItems: "center" }}>
-                  <Ic n={f.icon} size={11} color={c.textDim} />
-                  <span style={{ fontSize: 11, color: c.textDim }}>{f.val}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 6 }}>Optional Message <span style={{ fontWeight: 400, color: c.textDim }}>(your note to students)</span></div>
-            <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={3} style={ta} placeholder={`"This workshop may be useful for students interested in AI. Registration closes ${event.regDeadline}."`} />
-          </div>
-          <div style={{ padding: "12px 14px", borderRadius: 12, background: `${c.primary}08`, border: `1px solid ${c.primary}20` }}>
-            <div style={{ display: "flex", gap: 6, alignItems: "center", marginBottom: 6 }}>
-              <Ic n="shield" size={13} color={c.primary} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: c.primary }}>Target Audience · Automatically Assigned</span>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              {["CSE", "Batch 52", "Section B"].map(chip => (
-                <span key={chip} style={{ padding: "2px 10px", borderRadius: 999, fontSize: 11, fontWeight: 600, background: `${c.primary}12`, color: c.primary, border: `1px solid ${c.primary}25` }}>{chip}</span>
-              ))}
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <GhostBtn onClick={onClose}>Cancel</GhostBtn>
-            <PrimaryBtn icon="eye" onClick={() => setScreen("preview")}>Preview</PrimaryBtn>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-type AddEventField = { title: string; eventType: string; organizer: string; organizerType: string; description: string; date: string; startTime: string; endTime: string; location: string; regDeadline: string; regLink: string; sourceLink: string };
-
-function AddExternalEventModal({ onClose }: { onClose: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const [screen, setScreen] = useState<"form" | "success">("form");
-  const [f, setF] = useState<AddEventField>({ title: "", eventType: "External Workshop", organizer: "", organizerType: "", description: "", date: "", startTime: "", endTime: "", location: "", regDeadline: "", regLink: "", sourceLink: "" });
-  const inp: React.CSSProperties = { width: "100%", padding: "9px 12px", borderRadius: 9, border: `1px solid ${c.border}`, background: c.surface2, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box" };
-  const sel: React.CSSProperties = { ...inp, cursor: "pointer" };
-  const ta: React.CSSProperties = { ...inp, resize: "vertical" };
-  const lbl = (t: string) => <div style={{ fontSize: 12, fontWeight: 600, color: c.textMuted, marginBottom: 5 }}>{t}</div>;
-  const up = (k: keyof AddEventField) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF(p => ({ ...p, [k]: e.target.value }));
-
-  if (screen === "success") return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "44px 36px", maxWidth: 400, width: "90%", textAlign: "center", boxShadow: c.cardShadow }}>
-        <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(16,185,129,0.1)", border: "2px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-          <Ic n="check" size={24} color="#10B981" />
-        </div>
-        <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 8 }}>Event Added</div>
-        <div style={{ fontSize: 13, color: c.textDim, marginBottom: 6 }}>{f.title || "External Event"}</div>
-        <div style={{ fontSize: 12, color: c.textDim, marginBottom: 24 }}>You can now share it with your class.</div>
-        <PrimaryBtn onClick={onClose}>Done</PrimaryBtn>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 540, width: "95%", boxShadow: c.cardShadow, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 17, color: c.text }}>Add External Event</div>
-            <div style={{ fontSize: 12, color: c.textDim, marginTop: 2 }}>Add an external event to share with your class</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
-          <div>{lbl("Event Title *")}<input value={f.title} onChange={up("title")} style={inp} placeholder="e.g. AI & Machine Learning Workshop" /></div>
-          <div>{lbl("Event Type *")}<select value={f.eventType} onChange={up("eventType")} style={sel}>{["External Workshop", "External Event", "Seminar", "Competition", "Hackathon", "Career Event", "Other"].map(t => <option key={t}>{t}</option>)}</select></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>{lbl("Organizer Name *")}<input value={f.organizer} onChange={up("organizer")} style={inp} placeholder="e.g. Tech Organization" /></div>
-            <div>{lbl("Organizer Type")}<input value={f.organizerType} onChange={up("organizerType")} style={inp} placeholder="e.g. External Organization" /></div>
-          </div>
-          <div>{lbl("Description")}<textarea value={f.description} onChange={up("description")} rows={3} style={ta} placeholder="What is this event about?" /></div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-            <div>{lbl("Date *")}<input value={f.date} onChange={up("date")} style={inp} placeholder="Sep 20" /></div>
-            <div>{lbl("Start Time")}<input value={f.startTime} onChange={up("startTime")} style={inp} placeholder="10:00 AM" /></div>
-            <div>{lbl("End Time")}<input value={f.endTime} onChange={up("endTime")} style={inp} placeholder="4:00 PM" /></div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>{lbl("Location")}<input value={f.location} onChange={up("location")} style={inp} placeholder="University Auditorium" /></div>
-            <div>{lbl("Registration Deadline")}<input value={f.regDeadline} onChange={up("regDeadline")} style={inp} placeholder="Sep 15" /></div>
-          </div>
-          <div>{lbl("Registration Link")}<input value={f.regLink} onChange={up("regLink")} style={inp} placeholder="https://..." /></div>
-          <div>{lbl("Source Link")}<input value={f.sourceLink} onChange={up("sourceLink")} style={inp} placeholder="Event page or announcement link" /></div>
-          <div style={{ padding: "10px 12px", borderRadius: 10, background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)", fontSize: 11, color: "#92400E" }}>
-            ℹ️ This event will be clearly labeled as an external event shared by you as CR — not an official university event.
-          </div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <GhostBtn onClick={onClose}>Cancel</GhostBtn>
-            <PrimaryBtn icon="check" onClick={() => { if (f.title && f.organizer) setScreen("success"); }}>Add Event</PrimaryBtn>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function EventDetailModal({ event, onClose, onShare }: { event: typeof EVENTS_DATA[0]; onClose: () => void; onShare: () => void }) {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const col = EVENT_TYPE_COLOR[event.type] ?? c.primary;
-  const regColor = event.regStatus === "Open" ? "#10B981" : event.regStatus === "Closing Soon" ? "#F59E0B" : "#EF4444";
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: c.overlay, display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-      <div style={{ background: c.surface, borderRadius: 20, padding: "28px 30px", maxWidth: 540, width: "95%", boxShadow: c.cardShadow, maxHeight: "90vh", overflowY: "auto" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
-              <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: col, background: `${col}10`, border: `1px solid ${col}25` }}>{event.type}</span>
-              {event.sharedByYou && <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#8B5CF6", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>Shared by CR</span>}
-            </div>
-            <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 18, color: c.text, marginBottom: 4 }}>{event.title}</div>
-            <div style={{ fontSize: 13, color: c.textDim }}>Organized by: {event.organizer} · {event.organizerType}</div>
-          </div>
-          <button onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, border: `1px solid ${c.border}`, background: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginLeft: 12 }}>
-            <Ic n="x" size={15} color={c.textDim} />
-          </button>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ padding: "13px 15px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}`, fontSize: 13, color: c.text, lineHeight: 1.6 }}>{event.about}</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-            {[
-              { label: "Date", value: event.date },
-              { label: "Time", value: event.time },
-              { label: "Location", value: event.location },
-              { label: "Registration Deadline", value: event.regDeadline },
-              { label: "Source", value: event.source },
-              { label: "Organizer Type", value: event.organizerType },
-            ].map(row => (
-              <div key={row.label} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 3 }}>{row.label}</div>
-                <div style={{ fontSize: 12, fontWeight: 600, color: c.text }}>{row.value}</div>
-              </div>
-            ))}
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: `${regColor}08`, border: `1px solid ${regColor}30`, borderRadius: 10 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: regColor, flexShrink: 0 }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: regColor }}>Registration {event.regStatus}</span>
-            {event.regStatus !== "Closed" && <span style={{ fontSize: 11, color: c.textDim }}>→ You may be redirected to the organizer&apos;s registration page.</span>}
-          </div>
-          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <GhostBtn onClick={onClose}>Close</GhostBtn>
-            {!event.sharedByYou && <PrimaryBtn icon="megaphone" onClick={() => { onClose(); onShare(); }}>Share with Section</PrimaryBtn>}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function CREventsPage() {
-  const { theme } = useTheme();
-  const c = tok(theme);
-  const ALL_FILTERS = ["All", "University", "Department", "Club", "External", "Workshop", "Competition", "Seminar", "Hackathon", "Career"] as const;
-  const [filter, setFilter] = useState<typeof ALL_FILTERS[number]>("All");
-  const [search, setSearch] = useState("");
-  const [shareFor, setShareFor] = useState<typeof EVENTS_DATA[0] | null>(null);
-  const [detailFor, setDetailFor] = useState<typeof EVENTS_DATA[0] | null>(null);
-  const [showAddExt, setShowAddExt] = useState(false);
-
-  const regColor = (s: RegStatus) => s === "Open" ? "#10B981" : s === "Closing Soon" ? "#F59E0B" : "#EF4444";
-
-  const visible = EVENTS_DATA.filter(e => {
-    const matchF = filter === "All" || e.type === filter;
-    const matchS = !search || e.title.toLowerCase().includes(search.toLowerCase()) || e.organizer.toLowerCase().includes(search.toLowerCase()) || e.type.toLowerCase().includes(search.toLowerCase());
-    return matchF && matchS;
-  });
-
-  const sharedByYou = EVENTS_DATA.filter(e => e.sharedByYou);
-  const closingSoon = EVENTS_DATA.filter(e => e.regStatus === "Closing Soon");
-  const thisWeek = EVENTS_DATA.filter((_, i) => i < 3);
-
-  const summaryStats = [
-    { label: "Upcoming Events", value: String(EVENTS_DATA.length), icon: "🎉", color: c.primary, bg: `${c.primary}15` },
-    { label: "Shared by You", value: String(sharedByYou.length), icon: "📢", color: "#8B5CF6", bg: "rgba(139,92,246,0.12)" },
-    { label: "Registration Closing Soon", value: String(closingSoon.length), icon: "⏰", color: "#F59E0B", bg: "rgba(245,158,11,0.12)" },
-    { label: "This Week", value: String(thisWeek.length), icon: "📅", color: "#10B981", bg: "rgba(16,185,129,0.12)" },
-  ];
-
-  return (
-    <>
-      {shareFor && <ShareEventWithSectionModal event={shareFor} onClose={() => setShareFor(null)} />}
-      {detailFor && <EventDetailModal event={detailFor} onClose={() => setDetailFor(null)} onShare={() => setShareFor(detailFor)} />}
-      {showAddExt && <AddExternalEventModal onClose={() => setShowAddExt(false)} />}
-
-      <div style={{ flex: 1, overflowY: "auto", padding: "28px 28px 80px", background: c.bg }}>
-        <div style={{ maxWidth: 1280, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
-
-          {/* Header */}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 16, flexWrap: "wrap" }}>
-            <div>
-              <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 24, color: c.text, letterSpacing: "-0.02em", marginBottom: 4 }}>Events</h1>
-              <p style={{ fontSize: 13, color: c.textMuted }}>Discover and share relevant events, workshops, and opportunities with your class.</p>
-              <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
-                {["CSE", "Batch 52", "Section B"].map(chip => (
-                  <span key={chip} style={{ padding: "3px 11px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: `${c.primary}10`, color: c.primary, border: `1px solid ${c.primary}22` }}>{chip}</span>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: "flex", gap: 10 }}>
-              <GhostBtn icon="plus" onClick={() => setShowAddExt(true)}>Add External Event</GhostBtn>
-              <PrimaryBtn icon="megaphone" onClick={() => setShareFor(EVENTS_DATA[0])}>Share Event</PrimaryBtn>
-            </div>
-          </div>
-
-          {/* Summary cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
-            {summaryStats.map(s => (
-              <div key={s.label} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 14, padding: "14px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ width: 38, height: 38, borderRadius: 10, background: s.bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, flexShrink: 0 }}>{s.icon}</div>
-                <div>
-                  <div style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 22, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: c.text, marginTop: 2 }}>{s.label}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* 2-col layout */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 310px", gap: 20, alignItems: "flex-start" }}>
-
-            {/* Left: search + filters + events */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-
-              {/* Search + filter bar */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 20px", boxShadow: c.cardShadow }}>
-                <div style={{ position: "relative", marginBottom: 12 }}>
-                  <div style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }}><Ic n="search" size={14} color={c.textDim} /></div>
-                  <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search events..." style={{ width: "100%", padding: "9px 12px 9px 34px", borderRadius: 10, border: `1px solid ${c.border}`, background: c.surface2, color: c.text, fontSize: 13, fontFamily: "Inter", outline: "none", boxSizing: "border-box" }} />
-                </div>
-                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  {ALL_FILTERS.map(f => (
-                    <button key={f} onClick={() => setFilter(f)}
-                      style={{ padding: "5px 13px", borderRadius: 999, fontSize: 12, fontWeight: filter === f ? 700 : 500, background: filter === f ? `${c.primary}12` : "transparent", color: filter === f ? c.primary : c.textDim, border: `1px solid ${filter === f ? c.primary + "30" : c.border}`, cursor: "pointer", transition: "all 0.14s" }}>
-                      {f === "All" ? "All Events" : f}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Event cards */}
-              {visible.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "40px 0", color: c.textDim, background: c.surface, borderRadius: 16, border: `1px solid ${c.border}` }}>
-                  <div style={{ fontSize: 24, marginBottom: 8 }}>🎉</div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>No events found</div>
-                </div>
-              ) : visible.map(ev => {
-                const col = EVENT_TYPE_COLOR[ev.type] ?? c.primary;
-                return (
-                  <div key={ev.id} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "18px 20px", boxShadow: c.cardShadow }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
-                          <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: col, background: `${col}10`, border: `1px solid ${col}25` }}>{ev.type}</span>
-                          {ev.sharedByYou && <span style={{ padding: "2px 9px", borderRadius: 999, fontSize: 10, fontWeight: 700, color: "#8B5CF6", background: "rgba(139,92,246,0.08)", border: "1px solid rgba(139,92,246,0.2)" }}>Shared by CR</span>}
-                          <span style={{ fontSize: 11, color: c.textDim }}>by {ev.organizer}</span>
-                        </div>
-                        <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text, marginBottom: 3 }}>{ev.title}</div>
-                        <div style={{ fontSize: 11, color: c.textDim }}>Organized by: {ev.organizer} · {ev.organizerType}</div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, padding: "3px 10px", borderRadius: 999, background: `${regColor(ev.regStatus)}10`, border: `1px solid ${regColor(ev.regStatus)}30`, flexShrink: 0 }}>
-                        <div style={{ width: 7, height: 7, borderRadius: "50%", background: regColor(ev.regStatus) }} />
-                        <span style={{ fontSize: 10, fontWeight: 700, color: regColor(ev.regStatus) }}>Reg. {ev.regStatus}</span>
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 14, padding: "9px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}`, marginBottom: 12, flexWrap: "wrap" }}>
-                      {[{ icon: "calendar", val: ev.date }, { icon: "clock", val: ev.time }, { icon: "map", val: ev.location }].map((f, i) => (
-                        <div key={i} style={{ display: "flex", gap: 5, alignItems: "center" }}>
-                          <Ic n={f.icon} size={12} color={c.textDim} />
-                          <span style={{ fontSize: 12, fontWeight: 600, color: c.text }}>{f.val}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <GhostBtn small icon="eye" onClick={() => setDetailFor(ev)}>View Details</GhostBtn>
-                      {!ev.sharedByYou
-                        ? <PrimaryBtn small icon="megaphone" onClick={() => setShareFor(ev)}>Share with Section</PrimaryBtn>
-                        : <div style={{ padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600, color: "#8B5CF6", background: "rgba(139,92,246,0.07)", border: "1px solid rgba(139,92,246,0.2)" }}>✓ Shared {ev.sharedTime}</div>
-                      }
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right sidebar */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-              {/* My Shared Events */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
-                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 14 }}>My Shared Events</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {sharedByYou.map(ev => (
-                    <div key={ev.id} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
-                      <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 12, color: c.text, marginBottom: 3 }}>{ev.title}</div>
-                      <div style={{ fontSize: 10, color: c.textDim, marginBottom: 6 }}>Shared: {ev.sharedTime}</div>
-                      <div style={{ fontSize: 10, color: c.textDim, marginBottom: 8 }}>CSE · Batch 52 · Section B</div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        <button onClick={() => setDetailFor(ev)} style={{ fontSize: 10, fontWeight: 600, color: c.primary, background: `${c.primary}10`, border: `1px solid ${c.primary}20`, padding: "3px 8px", borderRadius: 6, cursor: "pointer" }}>View</button>
-                        <button style={{ fontSize: 10, fontWeight: 600, color: c.textDim, background: c.surface, border: `1px solid ${c.border}`, padding: "3px 8px", borderRadius: 6, cursor: "pointer" }}>Edit Message</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Recent Activity */}
-              <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "20px 22px", boxShadow: c.cardShadow }}>
-                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text, marginBottom: 14 }}>Recent Event Activity</div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-                  {EVENTS_ACTIVITY.map((a, i) => (
-                    <div key={i} style={{ padding: "10px 12px", background: c.surface2, borderRadius: 10, border: `1px solid ${c.border}` }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: c.primary, marginBottom: 2 }}>{a.verb}:</div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: c.text }}>{a.detail}</div>
-                      <div style={{ fontSize: 10, color: c.textDim, marginTop: 3 }}>{a.time}</div>
-                    </div>
-                  ))}
-                </div>
-                <button style={{ fontSize: 12, fontWeight: 600, color: c.primary, background: "none", border: "none", cursor: "pointer", marginTop: 12, padding: 0 }}>View Activity History →</button>
-              </div>
-
-              {/* Role reminder */}
-              <div style={{ padding: "14px 16px", background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.18)", borderRadius: 12 }}>
-                <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 12, color: "#92400E", marginBottom: 6 }}>Role Reminder</div>
-                <div style={{ fontSize: 11, color: "#78350F", lineHeight: 1.5 }}>
-                  You are sharing events as CR — not as the organizer. Always show who organized the event clearly.
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 // ─── CR PORTAL ROOT ───────────────────────────────────────────────────────────────
-export default function CRPortal({ onBack }: { onBack?: () => void } = {}) {
-  const router = useRouter();
-  const goToStudentPortal = onBack ?? (() => router.push("/dashboard"));
+export default function CRPortal() {
+
   const { theme } = useTheme();
   const c = tok(theme);
   const [activeNav, setActiveNav] = useState("dashboard");
@@ -1555,13 +997,18 @@ export default function CRPortal({ onBack }: { onBack?: () => void } = {}) {
   };
 
   const renderMain = () => {
+    if (activeNav === "clubs") return <ClubsView/>;
+    if (activeNav === "opportunities") return <OpportunitiesView/>;
+    if (activeNav === "directory") return <DirectoryView/>;
+    if (activeNav === "profile") return <AccountView/>;
+    if (activeNav === "settings") return <AccountView settings/>;
     if (activeNav === "materials") return <MaterialsPage />;
     if (activeNav === "routine") return <RoutineView />;
     if (activeNav === "classupdates") return <CRClassUpdatesPage />;
     if (activeNav === "assignments") return <CRAssignmentsPage />;
     if (activeNav === "announcements") return <AnnouncementsView />;
     if (activeNav === "exams") return <ExamsView />;
-    if (activeNav === "events") return <CREventsPage />;
+    if (activeNav === "events") return <EventsView />;
     if (activeNav === "notifications") return <NotificationsPage onNavigate={id => handleSetActive(id === "class-updates" ? "classupdates" : id)} />;
     return <CRDashboardHome onNavigate={handleSetActive} />;
   };
@@ -1589,7 +1036,7 @@ export default function CRPortal({ onBack }: { onBack?: () => void } = {}) {
 
         {/* Main */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, minWidth: 0 }}>
-          <CRHeader onNotifications={() => setActiveNav("notifications")} onMenuClick={() => setMobSidebar(true)} onBack={goToStudentPortal} />
+          <CRHeader onNotifications={() => setActiveNav("notifications")} onMenuClick={() => setMobSidebar(true)} onBack={() => setActiveNav("dashboard")} />
           {renderMain()}
         </div>
       </div>

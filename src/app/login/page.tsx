@@ -57,7 +57,7 @@ export default function LoginPage() {
                     {/* Header */}
                     <div style={{ textAlign: "center", marginBottom: 24 }}>
                         <h1 style={{ fontFamily: "Manrope, sans-serif", fontWeight: 800, fontSize: 24, color: c.text, marginBottom: 8 }}>Welcome back</h1>
-                        <p style={{ fontSize: 13, color: c.textMuted }}>Sign in to UniLink to access your courses, routine, and class updates.</p>
+                        <p style={{ fontSize: 13, color: c.textMuted }}>Sign in with your own email or student ID. Your saved account role determines your portal.</p>
                     </div>
 
                     {/* Role selector */}

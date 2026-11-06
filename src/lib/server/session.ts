@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { RowDataPacket } from "mysql2/promise";
 import { getDb } from "./db";
+import { AuthError } from "./auth-http";
 
 export const COOKIE_NAME = "unilink_session";
 const LIFETIME = 60 * 60 * 24 * 7;
@@ -16,13 +17,17 @@ export function cookieOptions() {
   return { httpOnly: true, secure: process.env.APP_ORIGIN?.startsWith("https://") ?? false,
     sameSite: "lax" as const, path: "/", maxAge: LIFETIME };
 }
-export async function createSession(userId: number) {
+export async function createSession(userId: number, expectedPasswordHash: string) {
   const jar = await cookies();
   const oldToken = jar.get(COOKIE_NAME)?.value;
   const token = randomBytes(32).toString("hex");
   const connection = await getDb().getConnection();
   try {
     await connection.beginTransaction();
+    const [users] = await connection.execute<RowDataPacket[]>(
+      "SELECT id FROM users WHERE id=? AND password_hash=? AND is_active=1 FOR UPDATE",
+      [userId, expectedPasswordHash]);
+    if (!users.length) throw new AuthError("Your credentials changed. Please sign in again.", 401);
     if (oldToken && /^[a-f0-9]{64}$/.test(oldToken))
       await connection.execute("DELETE FROM sessions WHERE token_hash = ?", [tokenHash(oldToken)]);
     await connection.execute("DELETE FROM sessions WHERE user_id = ? AND expires_at <= UTC_TIMESTAMP()", [userId]);
@@ -42,9 +47,10 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     [tokenHash(token)]);
   return rows[0] ?? null;
 }
-export async function requireUser(crOnly = false) {
+export async function requireUser(crOnly = false, studentOnly = false) {
   const user = await getSessionUser();
   if (!user) redirect("/login");
+  if (studentOnly && isCr(user.role)) redirect("/cr-portal");
   if (crOnly && !isCr(user.role)) redirect("/dashboard?access=cr-required");
   return user;
 }

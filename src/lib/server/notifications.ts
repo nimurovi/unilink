@@ -10,10 +10,13 @@ export const notificationSource = `
  UNION ALL SELECT 'materials',id,title,description,1,created_at FROM class_materials WHERE class_id=? AND deleted_at IS NULL
  UNION ALL SELECT 'assignments',id,title,description,version,created_at FROM assignments WHERE class_id=? AND deleted_at IS NULL
  UNION ALL SELECT 'routine',id,CONCAT(code,' · ',course),CONCAT(room,' · ',instructor),version,updated_at FROM class_routine WHERE class_id=?
- UNION ALL SELECT 'exams',id,title,CONCAT(IF(cancelled=1,'Cancelled · ',''),course,' · ',DATE_FORMAT(exam_date,'%Y-%m-%d'),' · ',TIME_FORMAT(start_time,'%H:%i')),version,updated_at FROM class_exams WHERE class_id=?`;
-export function classArgs(classId:number){return Array(6).fill(classId) as number[];}
+ UNION ALL SELECT 'exams',id,title,CONCAT(IF(cancelled=1,'Cancelled · ',''),course,' · ',DATE_FORMAT(exam_date,'%Y-%m-%d'),' · ',TIME_FORMAT(start_time,'%H:%i')),version,updated_at FROM class_exams WHERE class_id=?
+ UNION ALL SELECT 'events',id,title,CONCAT(IF(cancelled=1,'Cancelled · ',''),organizer,' · ',location),version,updated_at FROM class_events WHERE class_id=?
+ UNION ALL SELECT 'opportunities',id,title,CONCAT(IF(closed=1,'Closed · ',''),organization,' · ',category),version,updated_at FROM class_opportunities WHERE class_id=?
+ UNION ALL SELECT 'clubs',id,title,CONCAT(IF(closed=1,'Registration closed · ',''),category),version,updated_at FROM class_clubs WHERE class_id=?`;
+export function classArgs(classId:number){return Array(9).fill(classId) as number[];}
 export async function notificationUser(){const user=await getSessionUser();if(!user)throw new AuthError('Please sign in again.',401);return user;}
-export function notificationFailure(e:unknown){return e instanceof AuthError?json({error:e.message},e.status):json({error:'Notifications are unavailable. Check MySQL and run sql/009-notification-reads.sql after the earlier module migrations.'},503);}
+export function notificationFailure(e:unknown){return e instanceof AuthError?json({error:e.message},e.status):json({error:'Notifications are unavailable. Check MySQL and run sql/009-notification-reads.sql after the earlier module migrations, including sql/010-class-events.sql sql/011-class-opportunities.sql and sql/012-class-clubs.sql.'},503);}
 export async function notificationRequest(req:Request){
  checkOrigin(req);
  if(req.headers.get('content-type')?.split(';')[0].trim()!=='application/json')throw new AuthError('JSON is required.',415);

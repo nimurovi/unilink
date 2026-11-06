@@ -32,8 +32,8 @@ export async function POST(request: Request) {
     const valid = await verifyPassword(body.password, user?.password_hash ?? dummyHash);
     if (!user || !valid || !user.is_active) throw new AuthError("Incorrect email, student ID, or password.", 401);
     if (body.portal === "cr" && !isCr(user.role)) throw new AuthError("This account does not have CR access. Choose Student Login.", 403);
-    await createSession(user.id);
-    return json({ redirect: body.portal === "cr" ? "/cr-portal" : "/dashboard" });
+    await createSession(user.id, user.password_hash);
+    return json({ redirect: isCr(user.role) ? "/cr-portal" : "/dashboard" });
   } catch (error) { return authFailure(error); }
   finally { if (acquired) limit.active--; }
 }

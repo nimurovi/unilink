@@ -1,4 +1,5 @@
 "use client";
+import {usePortalCanManage} from './portal-access';
 import {useSyncExternalStore} from "react";
 import type {Material} from "./material-types";
 type State={materials:Material[];savedIds:string[];canManage:boolean;loading:boolean;error:string};
@@ -11,7 +12,7 @@ export async function refreshMaterials(){const n=++serial;try{
  }catch(e){if(n!==serial)return;state={...initial,loading:false,error:e instanceof Error?e.message:'Could not load materials.'};}emit();}
 function focus(){void refreshMaterials();}
 function subscribe(fn:()=>void){listeners.add(fn);if(listeners.size===1){focus();timer=setInterval(focus,15000);window.addEventListener('focus',focus);}return ()=>{listeners.delete(fn);if(!listeners.size){clearInterval(timer);window.removeEventListener('focus',focus);++serial;state=initial;}};}
-export function useMaterials(){return useSyncExternalStore(subscribe,()=>state,()=>initial);}
+export function useMaterials(){const snapshot=useSyncExternalStore(subscribe,()=>state,()=>initial);const canManage=usePortalCanManage(snapshot.canManage);return {...snapshot,canManage};}
 async function check(res:Response){if(!res.ok){const b=await res.json().catch(()=>({}));throw new Error(b.error||'Request failed. Please try again.');}}
 export async function uploadMaterial(form:FormData){const res=await fetch('/api/materials',{method:'POST',body:form});await check(res);await refreshMaterials();}
 export async function saveMaterial(id:string,saved:boolean){await check(await fetch(`/api/materials/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({saved})}));await refreshMaterials();}

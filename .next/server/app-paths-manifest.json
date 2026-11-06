@@ -1,13 +1,17 @@
 {
-  "/api/announcements/route": "app/api/announcements/route.js",
-  "/api/routine/route": "app/api/routine/route.js",
-  "/api/exams/route": "app/api/exams/route.js",
   "/api/notifications/route": "app/api/notifications/route.js",
-  "/api/materials/route": "app/api/materials/route.js",
+  "/api/account/route": "app/api/account/route.js",
+  "/api/opportunities/route": "app/api/opportunities/route.js",
+  "/api/exams/route": "app/api/exams/route.js",
+  "/api/routine/route": "app/api/routine/route.js",
+  "/api/events/route": "app/api/events/route.js",
   "/api/class-updates/route": "app/api/class-updates/route.js",
+  "/api/announcements/route": "app/api/announcements/route.js",
+  "/api/materials/route": "app/api/materials/route.js",
   "/api/assignments/route": "app/api/assignments/route.js",
+  "/api/clubs/route": "app/api/clubs/route.js",
   "/page": "app/page.js",
   "/login/page": "app/login/page.js",
-  "/cr-portal/page": "app/cr-portal/page.js",
-  "/dashboard/page": "app/dashboard/page.js"
+  "/dashboard/page": "app/dashboard/page.js",
+  "/cr-portal/page": "app/cr-portal/page.js"
 }

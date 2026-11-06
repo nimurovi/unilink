@@ -1,0 +1,29 @@
+CREATE TABLE IF NOT EXISTS class_events (
+ id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ class_id INT UNSIGNED NOT NULL,
+ author_id INT UNSIGNED NOT NULL,
+ title VARCHAR(200) NOT NULL,
+ description TEXT NOT NULL,
+ category VARCHAR(30) NOT NULL,
+ organizer VARCHAR(150) NOT NULL,
+ location VARCHAR(200) NOT NULL,
+ starts_at DATETIME NOT NULL,
+ ends_at DATETIME NOT NULL,
+ cancelled TINYINT(1) NOT NULL DEFAULT 0,
+ version INT UNSIGNED NOT NULL DEFAULT 1,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ KEY events_class_start (class_id,starts_at),
+ CONSTRAINT fk_event_class FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE RESTRICT,
+ CONSTRAINT fk_event_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS event_rsvps (
+ event_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ user_id INT UNSIGNED NOT NULL,
+ going TINYINT(1) NOT NULL,
+ updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ PRIMARY KEY (event_id,user_id),
+ CONSTRAINT fk_rsvp_event FOREIGN KEY (event_id) REFERENCES class_events(id) ON DELETE CASCADE,
+ CONSTRAINT fk_rsvp_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -3,7 +3,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');const vm=require('node:vm');const ts=require('typescript');
 function setup(fetcher){let snapshot,subscribe;const mod={exports:{}};
  const code=ts.transpileModule(fs.readFileSync('src/lib/announcements.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
- vm.runInNewContext(code,{module:mod,exports:mod.exports,require:n=>{if(n==='react')return {useSyncExternalStore:(sub,get)=>{subscribe=sub;snapshot=get;return get();}};if(n==='./announcements-types')return {};throw Error(n);},fetch:fetcher,window:{addEventListener(){},removeEventListener(){}},setInterval(){return 1;},clearInterval(){},setTimeout(){},URL,console});
+ vm.runInNewContext(code,{module:mod,exports:mod.exports,require:n=>{if(n==='./portal-access')return {usePortalCanManage:v=>v};if(n==='react')return {useSyncExternalStore:(sub,get)=>{subscribe=sub;snapshot=get;return get();}};if(n==='./announcements-types')return {};throw Error(n);},fetch:fetcher,window:{addEventListener(){},removeEventListener(){}},setInterval(){return 1;},clearInterval(){},setTimeout(){},URL,console});
  const api=mod.exports;api.useAnnouncement();return {api,state:()=>snapshot(),subscribe:()=>subscribe(()=>{})};
 }
 const entry={id:'a',title:'Notes'};

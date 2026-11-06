@@ -73,7 +73,7 @@ function sessionSetup(token='a'.repeat(64),rows=[]) {
  return {api:load('src/lib/server/session.ts'),calls,changes};
 }
 test('sessions rotate tokens, store only hashes, set HttpOnly and revoke on logout',async()=>{
- const s=sessionSetup();await s.api.createSession(7);
+ const s=sessionSetup('a'.repeat(64),[{id:7}]);await s.api.createSession(7,'hash');
  const insert=s.calls.find(c=>c[0].includes('INSERT INTO sessions'));
  const cookie=s.changes[0];assert.equal(cookie[0],'unilink_session');assert.match(cookie[1],/^[a-f0-9]{64}$/);assert.notEqual(insert[1][0],cookie[1]);assert.equal(insert[1][0],s.api.tokenHash(cookie[1]));assert.equal(cookie[2].httpOnly,true);assert.equal(cookie[2].sameSite,'lax');
  assert.ok(s.calls.some(c=>c[0].includes('DELETE FROM sessions WHERE token_hash')));
@@ -91,3 +91,8 @@ test('logout rejects foreign origins and clears sessions only on POST',async()=>
  assert.equal((await post(request({},'https://evil.test'))).status,403);assert.equal(destroyed,0);
  assert.equal((await post(request({}))).status,200);assert.equal(destroyed,1);
 });
+
+test('session creation rejects a credential replaced by a concurrent password change',async()=>{const s=sessionSetup();await assert.rejects(s.api.createSession(7,'stale-hash'),/credentials changed/);assert.ok(s.calls.some(c=>c[0].includes('password_hash=?')&&c[0].includes('FOR UPDATE')));assert.ok(s.calls.some(c=>c[0]==='rollback'));assert.equal(s.changes.length,0);assert.ok(!s.calls.some(c=>c[0].includes('INSERT INTO sessions')));});
+
+test('CR credentials choose CR destination even when Student Login was selected',async()=>{const s=loginSetup({...student,role:'cr'});const res=await s.post(request({...input,portal:'student'}));assert.equal(res.status,200);assert.equal((await res.json()).redirect,'/cr-portal');});
+test('student and CR route guards reject the other portal',async()=>{const cr=sessionSetup('a'.repeat(64),[{...student,role:'cr'}]);await assert.rejects(cr.api.requireUser(false,true),/redirect:\/cr-portal/);const st=sessionSetup('a'.repeat(64),[student]);assert.equal((await st.api.requireUser(false,true)).role,'student');await assert.rejects(st.api.requireUser(true),/cr-required/);assert.equal((await cr.api.requireUser(true)).role,'cr');});

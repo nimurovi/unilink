@@ -1,4 +1,9 @@
 "use client";
+import {PortalAccess} from '@/lib/portal-access';
+import {useAccount} from '@/lib/account';
+import {accountClass,accountInitial} from '@/lib/account-types';
+import {useEvent} from '@/lib/events';
+import {UpcomingEvents,useEventClock} from '@/components/ui/EventsView';
 import {AnnouncementsFeed} from "@/components/ui/AnnouncementsView";
 import {useAnnouncement} from "@/lib/announcements";
 import {UpcomingExams} from "@/components/ui/ExamsView";
@@ -19,6 +24,7 @@ import MaterialsPage from "@/app/materials/page";
 import AnnouncementsPage from "@/app/announcements/page";
 import EventsPage from "@/app/events/page";
 import ClubsPage from "@/app/clubs/page";
+import {OpportunitiesPreview} from '@/components/ui/OpportunitiesView';
 import OpportunitiesPage from "@/app/opportunities/page";
 import LostFoundPage from "@/app/lost-found/page";
 import {useNotifications} from "@/lib/notifications";
@@ -139,7 +145,7 @@ const NAV: NavGroup[] = [
   },
   {
     group: "COMMUNITY", items: [
-      { id: "directory", label: "Student Directory", icon: "users" },
+      { id: "directory", label: "Class Directory", icon: "users" },
       { id: "achievements", label: "Achievements", icon: "award" },
     ]
   },
@@ -153,10 +159,11 @@ const NAV: NavGroup[] = [
 ];
 
 // ─── SIDEBAR ──────────────────────────────────────────────────────────────────
-function Sidebar({ t, activeNav, setActiveNav, onClose, onCR }: {
-  t: Theme; activeNav: string; setActiveNav: (id: string) => void; onClose?: () => void; onCR?: () => void;
+function Sidebar({ t, activeNav, setActiveNav, onClose }: {
+  t: Theme; activeNav: string; setActiveNav: (id: string) => void; onClose?: () => void;
 }) {
   const c = tok(t);
+  const {account}=useAccount();
   const unread=useNotifications().entries.filter(e=>e.unread).length;
   return (
     <div style={{
@@ -214,59 +221,30 @@ function Sidebar({ t, activeNav, setActiveNav, onClose, onCR }: {
           </div>
         ))}
 
-        {/* CR MANAGEMENT — role-based section, visible only for CR users */}
-        {onCR && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: c.textDim, letterSpacing: "0.08em", padding: "0 8px", marginBottom: 6 }}>CR MANAGEMENT</div>
-            <button onClick={() => { onCR(); onClose?.(); }}
-              style={{
-                width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "8px 10px",
-                borderRadius: 9, marginBottom: 2, cursor: "pointer",
-                background: "transparent",
-                border: `1px solid transparent`,
-                color: c.textMuted,
-                fontFamily: "Inter", fontWeight: 500, fontSize: 13,
-                transition: "all 0.16s ease", textAlign: "left",
-              }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.background = `${c.primary}0D`;
-                (e.currentTarget as HTMLElement).style.borderColor = `${c.primary}25`;
-                (e.currentTarget as HTMLElement).style.color = c.primary;
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.background = "transparent";
-                (e.currentTarget as HTMLElement).style.borderColor = "transparent";
-                (e.currentTarget as HTMLElement).style.color = c.textMuted;
-              }}
-            >
-              <Ic n="shield" size={15} color={c.primary} />
-              <span style={{ flex: 1 }}>CR Portal</span>
-              <span style={{ padding: "1px 7px", borderRadius: 999, fontSize: 9, fontWeight: 700, background: `${c.primary}14`, color: c.primary, border: `1px solid ${c.primary}25`, letterSpacing: "0.04em" }}>CR</span>
-            </button>
-          </div>
-        )}
+
       </div>
 
       {/* Student profile */}
       <div style={{ padding: "14px 16px", borderTop: `1px solid ${c.sidebarBorder}`, display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ width: 34, height: 34, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, ${c.primaryDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff", fontFamily: "Manrope" }}>O</span>
+          <span style={{ fontSize: 14, fontWeight: 800, color: "#fff", fontFamily: "Manrope" }}>{accountInitial(account)}</span>
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: c.text, fontFamily: "Manrope" }}>Ovi</div>
-          <div style={{ fontSize: 11, color: c.textDim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>CSE · Batch 52 · Section B</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: c.text, fontFamily: "Manrope" }}>{account?.fullName||'Account'}</div>
+          <div style={{ fontSize: 11, color: c.textDim, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{accountClass(account)}</div>
         </div>
-        {onCR && <Ic n="shield" size={13} color={c.primary} />}
+
       </div>
     </div>
   );
 }
 
 // ─── TOP HEADER ───────────────────────────────────────────────────────────────
-function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate }: {
-  t: Theme; onMenuClick: () => void; notifOpen: boolean; setNotifOpen: (v: boolean) => void; onCR?: () => void; onNavigate?: (id: string) => void;
+function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onNavigate }: {
+  t: Theme; onMenuClick: () => void; notifOpen: boolean; setNotifOpen: (v: boolean) => void; onNavigate?: (id: string) => void;
 }) {
   const c = tok(t);
+  const {account}=useAccount();
   const unread=useNotifications().entries.filter(e=>e.unread).length;
   const { toggle } = useTheme();
   const [searchOpen, setSearchOpen] = useState(false);
@@ -297,7 +275,7 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
         </button>
         <div>
           <h1 style={{ fontFamily: "Manrope", fontWeight: 800, fontSize: 20, color: c.text, letterSpacing: "-0.02em" }}>
-            {greeting}, Ovi 👋
+            {greeting}, {account?.fullName||'there'} 👋
           </h1>
           <p style={{ fontSize: 13, color: c.textMuted, marginTop: 1 }}>Here&apos;s what&apos;s happening on your campus today.</p>
         </div>
@@ -339,7 +317,7 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
             onClick={() => setProfileOpen((v) => !v)}
             style={{ width: 36, height: 36, borderRadius: 10, background: `linear-gradient(135deg, ${c.primary}, ${c.primaryDark})`, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", border: profileOpen ? `2px solid ${c.primary}` : "2px solid transparent", transition: "border-color 0.15s", boxSizing: "border-box" }}
           >
-            <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", fontFamily: "Manrope" }}>O</span>
+            <span style={{ fontSize: 15, fontWeight: 800, color: "#fff", fontFamily: "Manrope" }}>{accountInitial(account)}</span>
           </button>
 
           {profileOpen && (
@@ -352,17 +330,12 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
               {/* User info */}
               <div style={{ padding: "16px 16px 14px", borderBottom: `1px solid ${c.border}`, display: "flex", gap: 10, alignItems: "center" }}>
                 <div style={{ width: 38, height: 38, borderRadius: 11, background: `linear-gradient(135deg, ${c.primary}, ${c.primaryDark})`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: "Manrope" }}>O</span>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#fff", fontFamily: "Manrope" }}>{accountInitial(account)}</span>
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>Ovi</div>
-                  <div style={{ fontSize: 11, color: c.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>CSE · Batch 52 · Section B</div>
-                  {onCR && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 3 }}>
-                      <Ic n="shield" size={10} color={c.primary} />
-                      <span style={{ fontSize: 10, fontWeight: 700, color: c.primary }}>Class Representative</span>
-                    </div>
-                  )}
+                  <div style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 14, color: c.text }}>{account?.fullName||'Account'}</div>
+                  <div style={{ fontSize: 11, color: c.textDim, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{accountClass(account)}</div>
+
                 </div>
               </div>
 
@@ -381,22 +354,6 @@ function DashHeader({ t, onMenuClick, notifOpen, setNotifOpen, onCR, onNavigate 
                   {item.label}
                 </button>
               ))}
-
-              {/* CR Portal entry — visible for CR or quick access */}
-              <div style={{ height: 1, background: c.border, margin: "4px 0" }} />
-              <button onClick={() => { setProfileOpen(false); if (onCR) onCR(); else window.location.href = "/cr-portal"; }}
-                style={{ display: "flex", alignItems: "flex-start", gap: 10, width: "100%", padding: "11px 16px", background: "none", border: "none", cursor: "pointer", textAlign: "left", transition: "background 0.12s" }}
-                onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.background = `${c.primary}0D`)}
-                onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.background = "none")}
-              >
-                <div style={{ width: 28, height: 28, borderRadius: 8, background: `${c.primary}14`, border: `1px solid ${c.primary}25`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 }}>
-                  <Ic n="shield" size={14} color={c.primary} />
-                </div>
-                <div>
-                  <div style={{ fontFamily: "Inter", fontWeight: 600, fontSize: 13, color: c.primary }}>CR Portal</div>
-                  <div style={{ fontFamily: "Inter", fontSize: 11, color: c.textDim, marginTop: 1 }}>Manage your section</div>
-                </div>
-              </button>
 
               {/* Log out */}
               <div style={{ height: 1, background: c.border, margin: "4px 0" }} />
@@ -434,6 +391,7 @@ function NotifPanel({ t, onClose, onViewAll }: { t: Theme; onClose: () => void; 
 
 // ─── STAT CARDS ────────────────────────────────────────────────────────────────
 function StatCards({ t }: { t: Theme }) {
+  const eventData=useEvent(),eventClock=useEventClock();
   const assignmentData=useAssignments();
   const announcementData=useAnnouncement();
   const routine=useRoutine(),routineClock=useRoutineClock();
@@ -441,7 +399,7 @@ function StatCards({ t }: { t: Theme }) {
   const stats = [
     { label: "Today's Classes", value: routine.loading||routine.error||!routineClock?"—":String(routine.entries.filter(e=>e.weekday===routineClock.day).length), sub: "Weekly routine", icon: "📚", color: c.primary, iconBg: `rgba(37,99,235,0.1)` },
     { label: "Assignments", value: String(assignmentData.assignments.filter(a=>a.status==="due-soon").length), sub: "Due soon", icon: "📝", color: "#F59E0B", iconBg: "rgba(245,158,11,0.1)" },
-    { label: "Events", value: "5", sub: "This week", icon: "🎪", color: "#8B5CF6", iconBg: "rgba(139,92,246,0.1)" },
+    { label: "Events", value: eventData.loading||eventData.error||eventClock===null?"—":String(eventData.entries.filter(e=>!e.cancelled&&new Date(e.endsAt).getTime()>eventClock).length), sub: "Upcoming / ongoing", icon: "🎪", color: "#8B5CF6", iconBg: "rgba(139,92,246,0.1)" },
     { label: "Announcements", value: announcementData.loading||announcementData.error?"—":String(announcementData.entries.length), sub: "Published for your class", icon: "📢", color: "#10B981", iconBg: "rgba(16,185,129,0.1)" },
   ];
   return (
@@ -532,97 +490,10 @@ function AssignmentsWidget({ t, onNavigate }: { t: Theme; onNavigate?: (id: stri
 }
 
 // ─── EVENTS (horizontal scroll) ───────────────────────────────────────────────
-function EventsWidget({ t, onNavigate }: { t: Theme; onNavigate?: (id: string) => void }) {
-  const c = tok(t);
-  const events = [
-    { title: "Hackathon 2026", cat: "Competition", date: "Sep 15", time: "9:00 AM – 6:00 PM", loc: "University Auditorium", emoji: "🏆", gradient: "linear-gradient(135deg,#DBEAFE,#EFF6FF)", organizer: "CSE Club", sharedByCR: true, regDeadline: "Sep 10", saved: false },
-    { title: "AI Workshop", cat: "Workshop", date: "Sep 18", time: "3:00 PM", loc: "Seminar Hall", emoji: "🤖", gradient: "linear-gradient(135deg,#F5F3FF,#EDE9FE)", organizer: "CSE Department", sharedByCR: false, regDeadline: "", saved: false },
-    { title: "Programming Contest", cat: "Competition", date: "Saturday", time: "10:00 AM", loc: "Lab Floor", emoji: "💻", gradient: "linear-gradient(135deg,#F0FDF4,#DCFCE7)", organizer: "ICPC Chapter", sharedByCR: true, regDeadline: "", saved: true },
-    { title: "Career Seminar", cat: "Career", date: "Sep 5", time: "2:00 PM", loc: "Auditorium", emoji: "🎓", gradient: "linear-gradient(135deg,#FEF3C7,#FFFBEB)", organizer: "Career Office", sharedByCR: false, regDeadline: "", saved: false },
-  ];
-  const [saved, setSaved] = useState<Record<number, boolean>>(() => Object.fromEntries(events.map((e, i) => [i, e.saved])));
-
-  return (
-    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
-        <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text }}>Upcoming Events</h3>
-        <span onClick={() => onNavigate?.("events")} style={{ fontSize: 12, color: c.primary, fontWeight: 600, cursor: "pointer" }}>View All →</span>
-      </div>
-      <div style={{ display: "flex", gap: 14, overflowX: "auto", paddingBottom: 4 }}>
-        {events.map((ev, i) => (
-          <div key={i} style={{ flexShrink: 0, width: 210, background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 14, overflow: "hidden", cursor: "pointer", transition: "all 0.18s ease" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 6px 20px rgba(37,99,235,0.1)"; }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "none"; }}
-          >
-            <div style={{ height: 76, background: ev.gradient, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30, position: "relative" }}>
-              {ev.emoji}
-              <span style={{ position: "absolute", top: 8, left: 10, padding: "3px 8px", borderRadius: 999, fontSize: 9, fontWeight: 700, background: "rgba(255,255,255,0.85)", color: "#64748B" }}>{ev.cat}</span>
-              <button onClick={(e) => { e.stopPropagation(); setSaved(s => ({ ...s, [i]: !s[i] })); }}
-                style={{ position: "absolute", top: 7, right: 8, width: 24, height: 24, borderRadius: 7, background: saved[i] ? c.primary : "rgba(255,255,255,0.85)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <Ic n="save" size={12} color={saved[i] ? "#fff" : "#64748B"} />
-              </button>
-              {ev.sharedByCR && (
-                <span style={{ position: "absolute", bottom: 8, right: 8, fontSize: 9, fontWeight: 700, color: "#8B5CF6", background: "rgba(139,92,246,0.12)", border: "1px solid rgba(139,92,246,0.25)", borderRadius: 4, padding: "1px 5px" }}>Shared by CR</span>
-              )}
-            </div>
-            <div style={{ padding: "11px 13px" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: c.text, marginBottom: 5, fontFamily: "Manrope", lineHeight: 1.3 }}>{ev.title}</div>
-              <div style={{ fontSize: 11, color: c.textMuted, marginBottom: 2 }}>{ev.date} · {ev.time}</div>
-              <div style={{ fontSize: 11, color: c.textDim, marginBottom: 5 }}>{ev.loc}</div>
-              <div style={{ fontSize: 10, color: c.textDim }}>Organized by <span style={{ color: c.text, fontWeight: 600 }}>{ev.organizer}</span></div>
-              {ev.regDeadline && (
-                <div style={{ marginTop: 8, padding: "5px 8px", background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.18)", borderRadius: 7 }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: "#F59E0B", marginBottom: 1 }}>REGISTRATION CLOSES</div>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: c.text }}>{ev.regDeadline}</div>
-                  <button style={{ width: "100%", marginTop: 5, padding: "4px 0", borderRadius: 5, background: "#F59E0B", border: "none", color: "#fff", fontSize: 10, fontWeight: 700, cursor: "pointer" }}>
-                    Register Now ↗
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+function EventsWidget({onNavigate}:{t:Theme;onNavigate?:(id:string)=>void}){return <UpcomingEvents onView={()=>onNavigate?.('events')}/>;}
 
 // ─── OPPORTUNITIES ────────────────────────────────────────────────────────────
-function OpportunitiesWidget({ t, onNavigate }: { t: Theme; onNavigate?: (id: string) => void }) {
-  const c = tok(t);
-  const opps = [
-    { title: "Software Engineering Internship", org: "TechCorp BD", type: "Internship", match: 98, emoji: "💼" },
-    { title: "AI Hackathon 2024", org: "BASIS", type: "Competition", match: 94, emoji: "🏆" },
-    { title: "Competitive Programming Contest", org: "ICPC Regional", type: "Competition", match: 88, emoji: "💻" },
-  ];
-  return (
-    <div style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 18, padding: "22px 24px", boxShadow: c.cardShadow }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <h3 style={{ fontFamily: "Manrope", fontWeight: 700, fontSize: 15, color: c.text }}>Recommended for You</h3>
-        <span onClick={() => onNavigate?.("opportunities")} style={{ fontSize: 12, color: c.primary, fontWeight: 600, cursor: "pointer" }}>View All →</span>
-      </div>
-      <div style={{ fontSize: 12, color: c.textDim, marginBottom: 16, display: "flex", alignItems: "center", gap: 6 }}>
-        <Ic n="sparkle" size={12} color={c.primary} />
-        Because you&apos;re interested in Programming
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {opps.map((o, i) => (
-          <div key={i} style={{ display: "flex", gap: 12, padding: "12px 14px", background: c.surface2, borderRadius: 12, border: `1px solid ${c.border}`, alignItems: "center", cursor: "pointer", transition: "border-color 0.16s ease" }}
-            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.borderColor = c.primary)}
-            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.borderColor = c.border)}
-          >
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: `rgba(37,99,235,0.08)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{o.emoji}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: c.text }}>{o.title}</div>
-              <div style={{ fontSize: 11, color: c.textDim }}>{o.org} · {o.type}</div>
-            </div>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "#10B981", background: "rgba(16,185,129,0.08)", padding: "3px 8px", borderRadius: 6, flexShrink: 0 }}>{o.match}%</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+function OpportunitiesWidget({onNavigate}:{t:Theme;onNavigate?:(id:string)=>void}) {return <OpportunitiesPreview onView={()=>onNavigate?.('opportunities')}/>;}
 
 // ─── MATERIALS ────────────────────────────────────────────────────────────────
 type MaterialType = "Official Material" | "Class Note" | "Student Note";
@@ -721,7 +592,7 @@ function AIFloat({ t }: { t: Theme }) {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [msgs, setMsgs] = useState([
-    { from: "ai", text: "Hi Ovi! I'm UniLink AI. Ask me anything about your campus." },
+    { from: "ai", text: "Hi! I'm UniLink AI. Ask me anything about your campus." },
   ]);
   const [typing, setTyping] = useState(false);
   const suggestions = ["What do I have tomorrow?", "Show my upcoming deadlines.", "Find programming opportunities."];
@@ -729,7 +600,7 @@ function AIFloat({ t }: { t: Theme }) {
   const aiResponses: Record<string, string> = {
     "What do I have tomorrow?": "Tomorrow you have 3 classes (9AM, 12PM, 2PM), 1 assignment due (Database Assignment 02), and 1 saved event (AI Workshop at 3PM). 📅",
     "Show my upcoming deadlines.": "Here are your next 3 deadlines:\n1. Database Assignment 02 — Tomorrow\n2. Algorithms Problem Set — Friday\n3. SE Presentation — Sep 2",
-    "Find programming opportunities.": "Found 3 great matches for you:\n• AI Hackathon (98% match)\n• SWE Internship at TechCorp\n• ICPC Regional (Competitive Programming)",
+    "Find programming opportunities.": "Open Opportunities in the sidebar to browse the latest opportunities shared with your class.",
   };
 
   const send = (text: string) => {
@@ -863,7 +734,9 @@ function MobileBottomNav({ t, active, setActive }: { t: Theme; active: string; s
 }
 
 // ─── MAIN DASHBOARD ──────────────────────────────────────────────────────────
-export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?: () => void } = {}) {
+export default function Dashboard(){return <PortalAccess.Provider value="student"><StudentDashboard/></PortalAccess.Provider>;}
+function StudentDashboard() {
+  const eventData=useEvent(),eventClock=useEventClock();
   const router = useRouter();
   const assignmentData=useAssignments();
   const announcementData=useAnnouncement();
@@ -871,8 +744,8 @@ export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?
   const submitted=assignmentData.assignments.filter(a=>a.hasSubmission).length;
   const assignmentTotal=assignmentData.assignments.length;
   const updateCount = useClassUpdates().filter(update => update.status === "published").length;
-  const goHome = onBack ?? (() => router.push("/"));
-  const goToCR = onCR ?? (() => router.push("/cr-portal"));
+  const goHome = (() => router.push("/"));
+
   const { theme } = useTheme();
   const c = tok(theme);
   const [activeNav, setActiveNav] = useState("dashboard");
@@ -911,14 +784,14 @@ export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?
       <div style={{ display: "flex", height: "100dvh", background: c.bg, overflow: "hidden" }}>
         {/* Sidebar */}
         <div className={`dash-sidebar${mobSidebar ? " open" : ""}`} style={{ height: "100vh", zIndex: 45, background: c.sidebar }}>
-          <Sidebar t={theme} activeNav={activeNav} setActiveNav={handleSetActiveNav} onClose={() => setMobSidebar(false)} onCR={goToCR} />
+          <Sidebar t={theme} activeNav={activeNav} setActiveNav={handleSetActiveNav} onClose={() => setMobSidebar(false)}  />
         </div>
 
         {/* Main */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, minWidth: 0 }}>
           {/* Header */}
           <div style={{ position: "relative" }}>
-            <DashHeader t={theme} onMenuClick={() => setMobSidebar(true)} notifOpen={notifOpen} setNotifOpen={setNotifOpen} onCR={goToCR} onNavigate={handleSetActiveNav} />
+            <DashHeader t={theme} onMenuClick={() => setMobSidebar(true)} notifOpen={notifOpen} setNotifOpen={setNotifOpen}  onNavigate={handleSetActiveNav} />
             {notifOpen && <NotifPanel t={theme} onClose={() => setNotifOpen(false)} onViewAll={() => { setNotifOpen(false); handleSetActiveNav("notifications"); }} />}
             {/* Back to landing */}
             <button onClick={goHome} style={{ position: "absolute", top: "50%", left: 16, transform: "translateY(-50%)", background: c.surface2, border: `1px solid ${c.border}`, borderRadius: 9, padding: "6px 12px", fontSize: 12, fontWeight: 600, color: c.textMuted, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
@@ -956,7 +829,7 @@ export default function Dashboard({ onBack, onCR }: { onBack?: () => void; onCR?
                 {[
                   { label: "Today's Classes", value: routine.loading||routine.error||!routineClock?"—":String(routine.entries.filter(e=>e.weekday===routineClock.day).length), sub: "Weekly routine", icon: "📚", color: c.primary, iconBg: `rgba(37,99,235,0.1)` },
                   { label: "Class Updates", value: String(updateCount), sub: "From your CR", icon: "⚠️", color: "#8B5CF6", iconBg: "rgba(139,92,246,0.1)" },
-                  { label: "Events", value: "5", sub: "This week", icon: "🎪", color: "#F59E0B", iconBg: "rgba(245,158,11,0.1)" },
+                  { label: "Events", value: eventData.loading||eventData.error||eventClock===null?"—":String(eventData.entries.filter(e=>!e.cancelled&&new Date(e.endsAt).getTime()>eventClock).length), sub: "Upcoming / ongoing", icon: "🎪", color: "#F59E0B", iconBg: "rgba(245,158,11,0.1)" },
                   { label: "Announcements", value: announcementData.loading||announcementData.error?"—":String(announcementData.entries.length), sub: "Published for your class", icon: "📢", color: "#10B981", iconBg: "rgba(16,185,129,0.1)" },
                 ].map((s) => (
                   <div key={s.label} style={{ background: c.surface, border: `1px solid ${c.border}`, borderRadius: 16, padding: "16px 18px", boxShadow: c.cardShadow, display: "flex", alignItems: "center", gap: 12 }}>
